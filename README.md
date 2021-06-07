@@ -1,5 +1,5 @@
 # `NEMESIS`
-exoplanet tra<span style="color:red">N</span>sit surv<span style="color:red">E</span>y of nearby <span style="color:red">M</span>-dwarfs in t<span style="color:red">ES</span>s ff<span style="color:red">IS</span>
+exoplanet tra<span style="color:red">N</span>sit surv<span style="color:red">E</span>y of nearby <span style="color:red">M</span>-dwarfs in t<span style="color:red">ES</span>s full frame <span style="color:red">ImageS</span>
 
 Description
 ----------
@@ -18,10 +18,3 @@ License
 ----------
 MIT
 
-Install
-----------
-`conda env create -f environment.yml -n nemesis`
-
-Update env
-----------
-`conda env export --no-builds > environment.yml`
