@@ -1,6 +1,5 @@
-# ######################################################
-# ################## UNDER CONSTRUCTION ################
-# ######################################################
+# [ UNDER CONSTRUCTION ]
+# 
 
 # `NEMESIS`
 exoplanet tra<span style="color:red">N</span>sit surv<span style="color:red">E</span>y of nearby <span style="color:red">M</span>-dwarfs in t<span style="color:red">ES</span>s full frame <span style="color:red">ImageS</span>
