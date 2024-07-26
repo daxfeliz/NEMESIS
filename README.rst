@@ -1,3 +1,6 @@
+# (WORK IN PROGRESS)
+## ONCE COMPLETED, CODE WITH INSTALLATION INSTRUCTIONS AND TUTORIALS WILL BE STORED HERE. STAY TUNED!
+
 NEMESIS: Exoplanet Transit Survey of Nearby M-dwarfs in TESS FFIs 
 
 (This is a repository in progress!)
