@@ -9,47 +9,83 @@ description = "NEMESIS: photometry, detrending and transit search of M dwarfs in
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10,<3.13"
 authors = [{ name = "Dax L. Feliz", email = "dfeliz@flatironinstitute.org" }]
-# Minimum versions are the NEMESIS II production versions; the exact
-# production environment is listed in environment/nemesis2_rusty_pip_freeze.txt.
-# numpy stays below 2 because NEMESIS II ran on numpy 1.26.4. LEO-Vetter is
-# pinned to the exact commit NEMESIS II used (it builds as leo_vetter 0.6.0);
-# PyPI's leo-vetter is a later release.
+
+# Python 3.12 is the tested reference interpreter from the NEMESIS II Rusty
+# environment snapshot. Other versions can be enabled after CI + science tests.
+requires-python = ">=3.12,<3.13"
+
+# Exact direct-package pins from environment/nemesis2_rusty_pip_freeze.txt.
+# This is the *actual installed snapshot*, not the later unverified
+# requirements.txt (which lists NumPy 2.5 / pandas 3 / SciPy 1.18).
+# Relax these for a future cross-platform release after testing.
 dependencies = [
-    "numpy>=1.26.4,<2",
-    "scipy>=1.15.2",
-    "matplotlib>=3.10.1",
-    "pandas>=2.2.3",
-    "astropy>=7.0.1",
-    "astroquery>=0.4.11",
-    "requests>=2.32.3",
-    "beautifulsoup4>=4.13.4",
-    "transitleastsquares>=1.32",
-    "wotan>=1.9",
-    "fbpca>=1.0",
-    "lightkurve>=2.5.0",
-    "lksearch>=1.2.1",
-    "astrobase>=0.5.3",
+    "numpy==1.26.4",
+    "pandas==2.2.3",
+    "scipy==1.15.2",
+    "matplotlib==3.10.1",
+    "astropy==7.0.1",
+    "astroquery==0.4.11",
+    "requests==2.32.3",
+    "urllib3==2.4.0",
+    "beautifulsoup4==4.13.4",
+    "transitleastsquares==1.32",
+    "wotan==1.9",
+    "fbpca==1.0",
+    "lightkurve==2.5.0",
+    "s3fs==2024.9.0",
+    "lksearch==1.2.1",
+    "astrobase==0.5.3",
+    "pyeebls==0.2.0",
+    "tess-point==0.9.3",
+    "multiprocess==0.70.16",
+    "rasterio==1.3.11",
+    "shapely==2.0.6",
+    "PyPDF2==3.0.1",
+    "Pillow==10.4.0",
+    # Preserve the exact LEO-Vetter commit recorded in the Linux freeze.
     "leo_vetter @ git+https://github.com/mkunimoto/LEO-vetter.git@6ca6dc619be90ca855afad5c21eb7ec7425005cf",
 ]
 
 [project.optional-dependencies]
-# Vetting tools (jaxoplanet refit, TRICERATOPS), pinned to the NEMESIS II
-# production versions because their interfaces change between releases.
-vet = [
+# JAX/jaxoplanet/NumPyro modeling used in separate NEMESIS II analysis scripts;
+# not directly imported by src/nemesis_tess/pipeline.py.
+modeling = [
     "jax==0.4.31",
     "jaxlib==0.4.31",
-    "numpyro==0.18.0",
     "jaxoplanet==0.0.4",
+    "numpyro==0.18.0",
+    "equinox==0.11.10",
     "arviz==0.23.4",
     "corner==2.3.0",
-    "h5netcdf==1.8.1",
-    "triceratops==1.0.20",
-    "pillow==10.4.0",
-    "pypdf==6.19.0",
 ]
-dev = ["jupyter", "ipykernel", "jupytext"]
+# TRICERATOPS validation is also outside the uploaded pipeline.py.
+# pip installs its transitive dependencies automatically (PyTransit, numba,
+# celerite, emcee, etc.). Full versions are in the Rusty freeze.
+validation = ["triceratops==1.0.20"]
+# For a single extra covering the *NEMESIS II analysis* environment.
+analysis = [
+    "jax==0.4.31",
+    "jaxlib==0.4.31",
+    "jaxoplanet==0.0.4",
+    "numpyro==0.18.0",
+    "equinox==0.11.10",
+    "arviz==0.23.4",
+    "corner==2.3.0",
+    "triceratops==1.0.20",
+]
+injection = ["batman-package==2.5.3"]
+imaging = ["photutils==2.3.0", "reproject==0.14.0"]
+prf = ["TESS_PRF==0.1.3"]
+# Everything used by the core pipeline and the named optional workflows.
+all = [
+    "jax==0.4.31", "jaxlib==0.4.31", "jaxoplanet==0.0.4",
+    "numpyro==0.18.0", "equinox==0.11.10", "arviz==0.23.4",
+    "corner==2.3.0", "triceratops==1.0.20",
+    "batman-package==2.5.3", "photutils==2.3.0", "reproject==0.14.0",
+    "TESS_PRF==0.1.3",
+]
+dev = ["build", "pytest", "jupyter", "ipykernel", "jupytext"]
 
 [project.urls]
 Homepage = "https://github.com/daxfeliz/NEMESIS"
