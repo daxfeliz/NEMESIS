@@ -59,10 +59,16 @@ modeling = [
     "arviz==0.23.4",
     "corner==2.3.0",
 ]
-# TRICERATOPS validation is also outside the uploaded pipeline.py.
-# pip installs its transitive dependencies automatically (PyTransit, numba,
-# celerite, emcee, etc.). Full versions are in the Rusty freeze.
-validation = ["triceratops==1.0.20"]
+# Validated dependency combination for NEMESIS II TRICERATOPS.
+# PyTransit 2.2.0 requires legacy NumPy/SciPy aliases supplied by
+# nemesis_tess.compat.load_triceratops().
+# setuptools 80.10.2 retains pkg_resources, needed by PyTransit.
+validation = [
+    "triceratops==1.0.20",
+    "PyTransit==2.2.0",
+    "setuptools==80.10.2",
+]
+#
 # For a single extra covering the *NEMESIS II analysis* environment.
 analysis = [
     "jax==0.4.31",
@@ -73,6 +79,8 @@ analysis = [
     "arviz==0.23.4",
     "corner==2.3.0",
     "triceratops==1.0.20",
+    "PyTransit==2.2.0",
+    "setuptools==80.10.2",
 ]
 injection = ["batman-package==2.5.3"]
 imaging = ["photutils==2.3.0", "reproject==0.14.0"]
@@ -82,6 +90,7 @@ all = [
     "jax==0.4.31", "jaxlib==0.4.31", "jaxoplanet==0.0.4",
     "numpyro==0.18.0", "equinox==0.11.10", "arviz==0.23.4",
     "corner==2.3.0", "triceratops==1.0.20",
+    "PyTransit==2.2.0", "setuptools==80.10.2",
     "batman-package==2.5.3", "photutils==2.3.0", "reproject==0.14.0",
     "TESS_PRF==0.1.3",
 ]

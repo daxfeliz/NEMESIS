@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+docs/_build/
 .ipynb_checkpoints/
 
 # Products the notebooks create when they run (any folder)
@@ -15,3 +16,4 @@ cache/
 
 # macOS
 .DS_Store
+*.swp

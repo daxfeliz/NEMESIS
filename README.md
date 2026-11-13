@@ -9,12 +9,27 @@ in preparation).
 
 ## Install
 
-Python 3.10, 3.11 or 3.12 is required. NEMESIS II ran on Python 3.12, and its
-numpy 1.x requirement has no builds for Python 3.13 or newer.
+Python 3.12 is required by the current package metadata
+(`requires-python = ">=3.12,<3.13"`). Other Python versions have not
+been validated for this pinned dependency set.
 
 ```bash
 pip install "nemesis-tess @ git+https://github.com/daxfeliz/NEMESIS.git"
 ```
+
+For the optional TRICERATOPS analysis environment, use the validation extra:
+
+```bash
+python -m pip install "nemesis-tess[validation] @ git+https://github.com/daxfeliz/NEMESIS.git"
+```
+
+This extra constrains TRICERATOPS, PyTransit and setuptools to the tested
+legacy versions. The reference validation wrapper in
+`examples/reference_wrappers/` calls `nemesis_tess.compat.load_triceratops()`
+to address obsolete PyTransit imports, but the reference wrapper **is not
+installed** as a NEMESIS public API by `pip install`. Clone the repository
+when following that tutorial. Direct third-party TRICERATOPS imports are
+not protected by the NEMESIS compatibility helper.
 
 ## Quick start
 
@@ -51,6 +66,31 @@ git clone https://github.com/daxfeliz/NEMESIS.git
 cd NEMESIS
 pip install -e ".[dev]"
 ```
+
+## Tutorials and Read the Docs
+
+The public docs source is in `docs/` and the five Jupyter examples in
+`docs/notebooks/`. The separate scientific reference wrappers live in
+`examples/reference_wrappers/`, including the actual `nemesis_jaxoplanet_refit.py`
+function used by the NEMESIS II batch worker. These examples are *not* new
+exports from the installed `nemesis_tess` library.
+
+The tutorials demonstrate (1) NEMESIS + LEO-Vetter BLS/TLS reports,
+(2) follow-up jaxoplanet/NumPyro transit refinement,
+(3) TRICERATOPS FPP/NFPP, (4) Lomb–Scargle rotation of TIC 350545089,
+and (5) the simple flare-threshold demonstration from the showcase PDF
+on TIC 260506296 (the code-executed TIC rather than the PDF heading).
+
+To build locally:
+
+```bash
+python -m pip install -r docs/requirements.txt
+python scripts/validate_notebooks.py
+python -m sphinx -b html docs docs/_build/html
+```
+
+Read the Docs renders notebooks without executing remote science runs.
+
 
 ## Citing
 

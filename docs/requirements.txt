@@ -1,0 +1,6 @@
+# Documentation only. Do not install NEMESIS/JAX/TRICERATOPS on RTD.
+sphinx>=7.4,<9
+sphinx-rtd-theme>=3,<4
+myst-parser>=4,<5
+nbsphinx>=0.9.5,<1
+nbformat>=5.9,<6
