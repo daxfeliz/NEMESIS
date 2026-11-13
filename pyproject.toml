@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nemesis-tess"
+dynamic = ["version"]
+description = "NEMESIS: photometry, detrending and transit search of M dwarfs in TESS full-frame images"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "Dax L. Feliz", email = "dfeliz@flatironinstitute.org" }]
+# Minimum versions are the NEMESIS II production versions; the exact
+# production environment is listed in environment/nemesis2_rusty_pip_freeze.txt.
+# numpy stays below 2 because NEMESIS II ran on numpy 1.26.4. LEO-Vetter is
+# pinned to the exact commit NEMESIS II used (it builds as leo_vetter 0.6.0);
+# PyPI's leo-vetter is a later release.
+dependencies = [
+    "numpy>=1.26.4,<2",
+    "scipy>=1.15.2",
+    "matplotlib>=3.10.1",
+    "pandas>=2.2.3",
+    "astropy>=7.0.1",
+    "astroquery>=0.4.11",
+    "requests>=2.32.3",
+    "beautifulsoup4>=4.13.4",
+    "transitleastsquares>=1.32",
+    "wotan>=1.9",
+    "fbpca>=1.0",
+    "lightkurve>=2.5.0",
+    "lksearch>=1.2.1",
+    "astrobase>=0.5.3",
+    "leo_vetter @ git+https://github.com/mkunimoto/LEO-vetter.git@6ca6dc619be90ca855afad5c21eb7ec7425005cf",
+]
+
+[project.optional-dependencies]
+# Vetting tools (jaxoplanet refit, TRICERATOPS), pinned to the NEMESIS II
+# production versions because their interfaces change between releases.
+vet = [
+    "jax==0.4.31",
+    "jaxlib==0.4.31",
+    "numpyro==0.18.0",
+    "jaxoplanet==0.0.4",
+    "arviz==0.23.4",
+    "corner==2.3.0",
+    "h5netcdf==1.8.1",
+    "triceratops==1.0.20",
+    "pillow==10.4.0",
+    "pypdf==6.19.0",
+]
+dev = ["jupyter", "ipykernel", "jupytext"]
+
+[project.urls]
+Homepage = "https://github.com/daxfeliz/NEMESIS"
+
+[tool.setuptools.dynamic]
+version = { attr = "nemesis_tess.pipeline.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nemesis_tess*"]

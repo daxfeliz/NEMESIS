@@ -1,0 +1,17 @@
+# Python build and cache files
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.ipynb_checkpoints/
+
+# Products the notebooks create when they run (any folder)
+Sector_*/
+Multi_Sector/
+cache/
+*_phasefold.png
+*.fits
+
+# macOS
+.DS_Store
