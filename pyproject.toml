@@ -9,7 +9,7 @@ description = "NEMESIS: photometry, detrending and transit search of M dwarfs in
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 authors = [{ name = "Dax L. Feliz", email = "dfeliz@flatironinstitute.org" }]
 # Minimum versions are the NEMESIS II production versions; the exact
 # production environment is listed in environment/nemesis2_rusty_pip_freeze.txt.

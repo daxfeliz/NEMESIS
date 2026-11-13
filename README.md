@@ -9,7 +9,8 @@ in preparation).
 
 ## Install
 
-Python 3.10 or newer is required; NEMESIS II ran on Python 3.12.
+Python 3.10, 3.11 or 3.12 is required. NEMESIS II ran on Python 3.12, and its
+numpy 1.x requirement has no builds for Python 3.13 or newer.
 
 ```bash
 pip install "nemesis-tess @ git+https://github.com/daxfeliz/NEMESIS.git"
