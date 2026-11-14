@@ -160,7 +160,7 @@ def generate_api_reference(repo_root: Path, check: bool = False) -> int:
             "https://github.com/daxfeliz/NEMESIS/blob/main/"
             f"{item.relative_file}#L{item.line}"
         )
-        return f"`View source <{url}>`_"
+        return f"`View source <{url}>`__"
 
     main: list[str] = [
         "API reference", "=============", "",

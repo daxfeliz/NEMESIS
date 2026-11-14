@@ -34,7 +34,7 @@ Supported top-level exports
 default_NEMESIS_pipeline_settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31347>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31347>`__
 
 **Description:** Return the default settings dictionary for the NEMESIS pipeline.
 
@@ -47,7 +47,7 @@ default_NEMESIS_pipeline_settings
 full_pipeline
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31938>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31938>`__
 
 **Description:** End-to-end NEMESIS pipeline: FFI/TPF retrieval → SAP → PLD → detrending → outlier removal → BLS/TLS transit search → vetting reports.
 
@@ -60,7 +60,7 @@ full_pipeline
 LC_creation
 ~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L18649>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L18649>`__
 
 **Description:** Produce processed TESS light curves for one or more sectors using the NEMESIS pipeline (Feliz et al. 2021, https://arxiv.org/abs/2103.05647).
 
@@ -73,7 +73,7 @@ LC_creation
 NoImageDataError
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L269>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L269>`__
 
 **Description:** Raised when no TESScut/TPF/FFI image data are available for a TIC+Sector+cadence.
 
@@ -86,7 +86,7 @@ NoImageDataError
 Transit_Pipeline
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31053>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31053>`__
 
 **Description:** Run BLS and optionally TLS transit searches, produce transit plots, and generate multi-page vetting reports.
 
@@ -102,7 +102,7 @@ Other module-level functions and classes
 align_arrays
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25328>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25328>`__
 
 **Description:** Align the model flux to the data flux by interpolating the model flux to match the phase values of the data.
 
@@ -115,7 +115,7 @@ align_arrays
 all_transit_times
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27750>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27750>`__
 
 **Description:** Return all predicted mid-transit times within the time span of t.
 
@@ -128,7 +128,7 @@ all_transit_times
 append_PDF
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23776>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23776>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -141,7 +141,7 @@ append_PDF
 apply_nan_to_flagged_rows
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7801>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7801>`__
 
 **Description:** NaN non-preserved columns on cadences whose QUALITY\_FLAG indicates flux-corrupting events.
 
@@ -154,7 +154,7 @@ apply_nan_to_flagged_rows
 Applying_Mdump_removal
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13556>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13556>`__
 
 **Description:** Apply momentum dump and sector jitter masking to a raw SAP light curve.
 
@@ -167,7 +167,7 @@ Applying_Mdump_removal
 asymmetric
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29527>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29527>`__
 
 **Description:** FA check: left/right transit asymmetry.
 
@@ -180,7 +180,7 @@ asymmetric
 bad_fit
 ~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29251>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29251>`__
 
 **Description:** FA check: poor fit of the trapezoidal transit model.
 
@@ -193,7 +193,7 @@ bad_fit
 bad_shape
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28867>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28867>`__
 
 **Description:** FA check: flux increases within the putative transit (bad transit shape).
 
@@ -206,7 +206,7 @@ bad_shape
 bin_ff
 ~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25168>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25168>`__
 
 **Description:** No description available in the source docstring.
 
@@ -219,7 +219,7 @@ bin_ff
 Bin_func
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L626>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L626>`__
 
 **Description:** This function will produced a light curve that is binned with a weighted bins.
 
@@ -232,7 +232,7 @@ Bin_func
 bin_quaternion_features
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7236>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7236>`__
 
 **Description:** Bin 2-sec quaternion data to LC cadence and compute the 36 QLP feature series following Kunimoto et al. (2022), arXiv:2211.04387.
 
@@ -245,7 +245,7 @@ bin_quaternion_features
 BLS_func
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20659>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20659>`__
 
 **Description:** Run the Astropy BLS algorithm and assemble all NEMESIS transit search outputs.
 
@@ -258,7 +258,7 @@ BLS_func
 calc_flux_contamination
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5813>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5813>`__
 
 **Description:** Compute the flux contamination ratio and its 1-sigma uncertainty for a target star given nearby TIC sources.
 
@@ -271,7 +271,7 @@ calc_flux_contamination
 calc_mean_depths
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24432>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24432>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -284,7 +284,7 @@ calc_mean_depths
 calc_transit_times
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24406>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24406>`__
 
 **Description:** Return all mid-transit times within t
 
@@ -297,7 +297,7 @@ calc_transit_times
 calculate_semi_major_axis
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13734>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13734>`__
 
 **Description:** Calculate the semi-major axis using Kepler's third law.
 
@@ -310,7 +310,7 @@ calculate_semi_major_axis
 CDPP
 ~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5593>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5593>`__
 
 **Description:** Compute the Combined Differential Photometric Precision (CDPP) of a light curve.
 
@@ -323,7 +323,7 @@ CDPP
 center_cutout
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L864>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L864>`__
 
 **Description:** For TESS Full Frame Images (FFI), this function will try to center the FFI on the target star, much like how Target Pixel Files (TPF) are centered on the target star.
 
@@ -336,7 +336,7 @@ center_cutout
 centroid_analysis
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26838>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26838>`__
 
 **Description:** Compute a centroid motion diagnostic for a NEMESIS TCE and render it on the Page-4 vetting report axes.
 
@@ -349,7 +349,7 @@ centroid_analysis
 centroid_quadratic
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5439>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5439>`__
 
 **Description:** This function computes the quadratic estimate of the centroid in a 2d-array. This method will fit a simple 2D second-order polynomial $P(x, y) = a + bx + cy + dx^2 + exy + fy^2$ to the 3x3 patch of pixels centered on…
 
@@ -362,7 +362,7 @@ centroid_quadratic
 chases
 ~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29026>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29026>`__
 
 **Description:** FA check: events not unique in the local light curve (few transits).
 
@@ -375,7 +375,7 @@ chases
 check_ALL_thresholds
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30185>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30185>`__
 
 **Description:** Run all 17–18 LEO-Vetter FA/FP checks and return an aggregate flag.
 
@@ -388,7 +388,7 @@ check_ALL_thresholds
 check_centroids
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5100>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5100>`__
 
 **Description:** This function will compare the location of the centroids produced by the 'SAP' function with the location of the reference pixel.
 
@@ -401,7 +401,7 @@ check_centroids
 check_edge
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5988>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5988>`__
 
 **Description:** This function is used to check if a polygon contains the edges of a Full Frame Image (FFI) or Target Pixel File (TPF).
 
@@ -414,7 +414,7 @@ check_edge
 check_imports_are_installed
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L84>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L84>`__
 
 **Description:** Try to import every module (and submodule) that NEMESIS uses in NEMESIS\_pipeline\_new\_temp\_2.py. Prints a compact report and returns (missing, imported) where each is a list of module strings.
 
@@ -427,7 +427,7 @@ check_imports_are_installed
 check_transit_symmetry
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25748>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25748>`__
 
 **Description:** Assess left/right transit symmetry using uncertainty-normalised (SNR-on-the-asymmetry) tests for both transit depth and fractional transit duration (q\_tran).
 
@@ -440,7 +440,7 @@ check_transit_symmetry
 check_wcs
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1009>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1009>`__
 
 **Description:** Returns an astropy.wcs.WCS for the input TESS FFI/TPF.
 
@@ -453,7 +453,7 @@ check_wcs
 chi
 ~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29625>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29625>`__
 
 **Description:** FA check: inconsistent per-transit SNRs (χ² statistic).
 
@@ -466,7 +466,7 @@ chi
 classify_retrieval_error
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4173>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4173>`__
 
 **Description:** Sort a cutout-retrieval exception into a plain-language cause.
 
@@ -479,7 +479,7 @@ classify_retrieval_error
 cleanup
 ~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31564>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31564>`__
 
 **Description:** Conditionally delete NEMESIS intermediate and ancillary data products at the end of a pipeline run.
 
@@ -492,7 +492,7 @@ cleanup
 collect_nearby_Gaia_params
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12294>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12294>`__
 
 **Description:** Query Vizier (Gaia DR3 by default) for sources within the TPF/FFI footprint and restrict the returned catalog to those whose (optionally PM-corrected) positions project inside the cutout's rectangular bounding box.
 
@@ -505,7 +505,7 @@ collect_nearby_Gaia_params
 collect_nearby_TIC_params
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10756>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10756>`__
 
 **Description:** Queries the TESS Input Catalog (TIC) for stellar parameters of the target star and nearby stars within a given radius. The radius is defined by the number of TESS pixels.
 
@@ -518,7 +518,7 @@ collect_nearby_TIC_params
 compare_to_model
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25463>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25463>`__
 
 **Description:** No description available in the source docstring.
 
@@ -531,7 +531,7 @@ compare_to_model
 compute_prf_aperture_weights
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L8497>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L8497>`__
 
 **Description:** Compute a PRF-based soft aperture weight map for a TESS TESScut cutout.
 
@@ -544,7 +544,7 @@ compute_prf_aperture_weights
 compute_sde_optimized
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20401>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20401>`__
 
 **Description:** Computes an array of SDE values, ensuring that max(SDE array) matches the classical SDE.
 
@@ -557,7 +557,7 @@ compute_sde_optimized
 compute_tce_coverage_metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27404>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27404>`__
 
 **Description:** Compute coverage-related vetting metrics for a single-sector TCE.
 
@@ -570,7 +570,7 @@ compute_tce_coverage_metrics
 consecutive
 ~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15299>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15299>`__
 
 **Description:** This function will search input data for points that are consecutive.
 
@@ -583,7 +583,7 @@ consecutive
 convert_TessMag_to_Flux
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5781>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5781>`__
 
 **Description:** This function will convert TESS Input Catalog (TIC) Magnitude into TESS Flux.
 
@@ -596,7 +596,7 @@ convert_TessMag_to_Flux
 convert_window_size_in_days_to_points
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13881>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13881>`__
 
 **Description:** This function converts a window size into a window size in number of data points, based on the cadence of timestamps in input time array.
 
@@ -609,7 +609,7 @@ convert_window_size_in_days_to_points
 create_box_model
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25095>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25095>`__
 
 **Description:** Create boxcar model.
 
@@ -622,7 +622,7 @@ create_box_model
 create_box_model_for_phasefolded
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25140>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25140>`__
 
 **Description:** Create boxcar model.
 
@@ -635,7 +635,7 @@ create_box_model_for_phasefolded
 create_circular_mask
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5230>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5230>`__
 
 **Description:** Build a boolean circular aperture mask centered on reference\_pixel.
 
@@ -648,7 +648,7 @@ create_circular_mask
 create_PDF_from_PNG
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23724>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23724>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -661,7 +661,7 @@ create_PDF_from_PNG
 current_tesscut_active
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2692>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2692>`__
 
 **Description:** Return approximate number of active TESScut/TESSSearch slots.
 
@@ -674,7 +674,7 @@ current_tesscut_active
 cut_around_T0
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27776>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27776>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -687,7 +687,7 @@ cut_around_T0
 data_gapped
 ~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29690>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29690>`__
 
 **Description:** FA check: too many transits fall near data gaps.
 
@@ -700,7 +700,7 @@ data_gapped
 df_len_check
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L418>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L418>`__
 
 **Description:** Print the row count of each column in a DataFrame for pipeline debugging.
 
@@ -713,7 +713,7 @@ df_len_check
 dmm
 ~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29100>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29100>`__
 
 **Description:** FA check: inconsistency between mean and median transit depths.
 
@@ -726,7 +726,7 @@ dmm
 edge_check
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1344>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1344>`__
 
 **Description:** Check whether a target star falls within 6 pixels of a TESS detector edge.
 
@@ -739,7 +739,7 @@ edge_check
 edgeWarn_tesspt2px
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1191>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1191>`__
 
 **Description:** Checks if a star (based on RA/Dec) is near the edge of a TESS camera for the given sectors.
 
@@ -752,7 +752,7 @@ edgeWarn_tesspt2px
 extract_background_flux
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6570>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6570>`__
 
 **Description:** Per-frame, sigma-clipped background estimation and raw SAP flux extraction.
 
@@ -765,7 +765,7 @@ extract_background_flux
 filter_phase_range
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25324>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25324>`__
 
 **Description:** No description available in the source docstring.
 
@@ -778,7 +778,7 @@ filter_phase_range
 find_min_trial_duration
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20291>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20291>`__
 
 **Description:** No description available in the source docstring.
 
@@ -791,7 +791,7 @@ find_min_trial_duration
 find_tesscut_file
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1441>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1441>`__
 
 **Description:** Return every file whose name matches tess-s00[sector]-[camera]-[ccd]\_\*[size]x[size]\*astrocut.fits anywhere under 'basedir'.
 
@@ -804,7 +804,7 @@ find_tesscut_file
 find_tpf_file
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1468>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1468>`__
 
 **Description:** Recursively find SPOC Target Pixel Files (TPFs) on disk.
 
@@ -817,7 +817,7 @@ find_tpf_file
 fix_wcs_axis_labels
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11293>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11293>`__
 
 **Description:** Configure WCS-projected axes so RA labels appear on the bottom edge and Dec labels appear on the left edge, with ~3 tick marks per axis.
 
@@ -830,7 +830,7 @@ fix_wcs_axis_labels
 format_ax
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11346>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11346>`__
 
 **Description:** This function will format the subplot used for plotting the input TESS Full Frame Image or Target Pixel File (FFI/TPF).
 
@@ -843,7 +843,7 @@ format_ax
 format_conditions_block
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28676>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28676>`__
 
 **Description:** Format a multi-line LEO-Vetter condition trace as an indented text block.
 
@@ -856,7 +856,7 @@ format_conditions_block
 fullphasefold
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21809>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21809>`__
 
 **Description:** Phase-fold a light curve onto the full ''[0, 1)'' orbital phase interval.
 
@@ -869,7 +869,7 @@ fullphasefold
 generate_injection_path
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L16572>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L16572>`__
 
 **Description:** Generates the appropriate file path based on the given parameters.
 
@@ -882,7 +882,7 @@ generate_injection_path
 get_coordinates
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10592>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10592>`__
 
 **Description:** Returns two 3D arrays of RA and Dec values in decimal degrees. If cadence number is given, returns 2D arrays for that cadence. If cadence is 'all' returns one RA, Dec value for each pixel in every cadence. Uses the…
 
@@ -895,7 +895,7 @@ get_coordinates
 get_flux_at_TN
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25043>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25043>`__
 
 **Description:** Get the flux value closest to a specific transit contact point (T1, T4, etc.) based on a phase-folded light curve (pf, ff). The window is used to limit the search to values close to the contact point (TN).
 
@@ -908,7 +908,7 @@ get_flux_at_TN
 get_GAIA_DR2_sources
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10678>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10678>`__
 
 **Description:** This function will query the GAIA catalog for nearby sources using a radial cone search.
 
@@ -921,7 +921,7 @@ get_GAIA_DR2_sources
 get_gain_and_readout_from_hdu
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6424>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6424>`__
 
 **Description:** No description available in the source docstring.
 
@@ -934,7 +934,7 @@ get_gain_and_readout_from_hdu
 get_LC_from_FFI
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L17280>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L17280>`__
 
 **Description:** Run the full per-sector NEMESIS LC extraction pipeline on a single HDU.
 
@@ -947,7 +947,7 @@ get_LC_from_FFI
 get_momentum_dump_times
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13184>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13184>`__
 
 **Description:** This function will do a bitmask search in the input TESS Full Frame Image or Target Pixel File (FFI/TPF) image headers for momentum dump timestamps that occurred during TESS observations.
 
@@ -960,7 +960,7 @@ get_momentum_dump_times
 get_pix_and_bkg_masks_and_image_fluxes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4896>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4896>`__
 
 **Description:** This function retrieves the pixel and background masks and the TESS image fluxes for a target star.
 
@@ -973,7 +973,7 @@ get_pix_and_bkg_masks_and_image_fluxes
 get_PLD_model
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14760>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14760>`__
 
 **Description:** Compute the additive PLD systematics model via weighted least squares.
 
@@ -986,7 +986,7 @@ get_PLD_model
 get_polygon
 ~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6017>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6017>`__
 
 **Description:** This function will produce a Shapely Polygon object that outlines the input pixel mask.
 
@@ -999,7 +999,7 @@ get_polygon
 get_qdata
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6712>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6712>`__
 
 **Description:** Download or load the TESS engineering quaternion FITS for a given sector from the MAST archive.
 
@@ -1012,7 +1012,7 @@ get_qdata
 get_qld
 ~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11130>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11130>`__
 
 **Description:** Retrieves quadratic limb darkening coefficients 'a' and 'b' for a given star, based on its effective temperature and surface gravity.
 
@@ -1025,7 +1025,7 @@ get_qld
 get_scalar
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28616>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28616>`__
 
 **Description:** Coerce any scalar-like object to a plain Python scalar.
 
@@ -1038,7 +1038,7 @@ get_scalar
 get_sources_in_aperture_mask
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6094>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6094>`__
 
 **Description:** This function will query the TESS Input Catalog (TIC) for nearby sources using a radial cone search and check which sources are inside the input aperture pixel mask.
 
@@ -1051,7 +1051,7 @@ get_sources_in_aperture_mask
 get_tess_reference_pixel
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4522>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4522>`__
 
 **Description:** Return 0-indexed pixel-center coordinates [col, row] from a TESS binary-table HDU header.
 
@@ -1064,7 +1064,7 @@ get_tess_reference_pixel
 get_TIC_ID
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L523>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L523>`__
 
 **Description:** Retrieves the TIC (TESS Input Catalog) ID of a given target star by querying the MAST Catalogs. If the star has a duplicate ID, the duplicate is returned. The search is conducted within a 5-arcsecond radius of the…
 
@@ -1077,7 +1077,7 @@ get_TIC_ID
 get_TOI_and_CTOI_catalogs
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23327>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23327>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1090,7 +1090,7 @@ get_TOI_and_CTOI_catalogs
 gethdu
 ~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4567>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4567>`__
 
 **Description:** Download TESS FFI/TPF cutouts from MAST for one or more sectors and return all metadata needed for downstream SAP.
 
@@ -1103,7 +1103,7 @@ gethdu
 gethdu_failure_summary
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4266>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4266>`__
 
 **Description:** One line saying why a TIC and sector ended with no image data.
 
@@ -1116,7 +1116,7 @@ gethdu_failure_summary
 gethdu_lksearch
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4307>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4307>`__
 
 **Description:** Return the verified cutout for one TIC ID and one sector, exactly as ''\_gethdu\_lksearch\_verified'' does, and log why when none comes back.
 
@@ -1129,7 +1129,7 @@ gethdu_lksearch
 HWHM
 ~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20018>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20018>`__
 
 **Description:** This function will calculated the Half-Width Half-Max (HWHM) of an input BLS\_periods, BLS\_SDEs data. This is used to estimate the uncertainty of the orbital period in the BLS power spectrum.
 
@@ -1142,7 +1142,7 @@ HWHM
 in_versus_out_of_transit_test
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26389>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26389>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1155,7 +1155,7 @@ in_versus_out_of_transit_test
 intransit_stats
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20054>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20054>`__
 
 **Description:** Compute per-transit and odd/even transit statistics for a BLS or TLS result.
 
@@ -1168,7 +1168,7 @@ intransit_stats
 invalid_transits
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28793>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28793>`__
 
 **Description:** FA check: insufficient valid transits after removing bad events.
 
@@ -1181,7 +1181,7 @@ invalid_transits
 is_point_inside_polygon
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6058>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6058>`__
 
 **Description:** This function will check if the input pixel coordinates are within the input Shapely polygon object.
 
@@ -1194,7 +1194,7 @@ is_point_inside_polygon
 is_TOI_or_CTOI
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23287>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23287>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1207,7 +1207,7 @@ is_TOI_or_CTOI
 large
 ~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29931>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29931>`__
 
 **Description:** FP check: planet candidate radius too large (likely an eclipsing binary).
 
@@ -1220,7 +1220,7 @@ large
 LC_to_LS
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24138>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24138>`__
 
 **Description:** Render the LS periodogram and phase-folded LC panels for vetting report page 3.
 
@@ -1233,7 +1233,7 @@ LC_to_LS
 lin_interp
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20002>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20002>`__
 
 **Description:** This function is used to perform a simple linear interpolation.
 
@@ -1246,7 +1246,7 @@ lin_interp
 load_camera_quaternions
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6766>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6766>`__
 
 **Description:** Extract TIME, Q1, Q2, Q3 for a given camera from a quaternion HDUList.
 
@@ -1259,7 +1259,7 @@ load_camera_quaternions
 load_triceratops
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.compat`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/compat.py#L8>`_
+**Location:** ``nemesis_tess.compat`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/compat.py#L8>`__
 
 **Description:** Import TRICERATOPS with compatibility fixes for PyTransit 2.2.0.
 
@@ -1272,7 +1272,7 @@ load_triceratops
 LS
 ~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23844>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23844>`__
 
 **Description:** Compute a generalized Lomb-Scargle periodogram with optional multi-term fitting.
 
@@ -1285,7 +1285,7 @@ LS
 Make_dirs
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L675>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L675>`__
 
 **Description:** Create all NEMESIS output directories and write resolved path strings back into ''default\_settings''.
 
@@ -1298,7 +1298,7 @@ Make_dirs
 mann2019_mass_radius
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10821>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10821>`__
 
 **Description:** Estimate M-dwarf stellar mass and radius from absolute 2MASS K\_s magnitude.
 
@@ -1311,7 +1311,7 @@ mann2019_mass_radius
 mask_out_neighbor_pixels
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L9395>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L9395>`__
 
 **Description:** Excise aperture pixels contaminated by neighboring stars.
 
@@ -1324,7 +1324,7 @@ mask_out_neighbor_pixels
 mass_radius_mdwarf_relation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L587>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L587>`__
 
 **Description:** Adjusts the mass and radius of an M-dwarf star based on the given inputs. This function uses an OVERLY simple linear mass-radius relationship for M-dwarfs, where if one of the stellar parameters (mass or radius) is…
 
@@ -1337,7 +1337,7 @@ mass_radius_mdwarf_relation
 mirror_and_model_left_right_transit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26223>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26223>`__
 
 **Description:** Performs a comprehensive symmetry analysis for a transit event by comparing the left and right mirrored transits to the model and computing various metrics such as RMSE, residuals, and chi-squared values. Also…
 
@@ -1350,7 +1350,7 @@ mirror_and_model_left_right_transit
 momentumdump_removal
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13372>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13372>`__
 
 **Description:** This function will remove windows of data around momentum dump time stamps and return a mask.
 
@@ -1363,7 +1363,7 @@ momentumdump_removal
 nan_symmetry_result
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26083>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26083>`__
 
 **Description:** Return a NaN-filled result with the exact 16-element shape that ''mirror\_and\_model\_left\_right\_transit'' returns on success.
 
@@ -1376,7 +1376,7 @@ nan_symmetry_result
 nan_vetting_columns
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26154>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26154>`__
 
 **Description:** NaN-filled replacement for the vetting-metric column block that ''in\_versus\_out\_of\_transit\_test'' normally appends to the bestfit frame.
 
@@ -1389,7 +1389,7 @@ nan_vetting_columns
 nanchecker
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25220>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25220>`__
 
 **Description:** Adjusts the standard deviation threshold to remove NaNs from mirrored fluxes.
 
@@ -1402,7 +1402,7 @@ nanchecker
 non_unique
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28932>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28932>`__
 
 **Description:** FA check: events not unique in the phased light curve.
 
@@ -1415,7 +1415,7 @@ non_unique
 odd_even
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29767>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29767>`__
 
 **Description:** FP check: significant odd/even transit depth mismatch (EB signature).
 
@@ -1428,7 +1428,7 @@ odd_even
 odd_even_cuts
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24476>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24476>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1441,7 +1441,7 @@ odd_even_cuts
 odd_even_mismatch_plot
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24538>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24538>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1454,7 +1454,7 @@ odd_even_mismatch_plot
 offset
 ~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30115>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30115>`__
 
 **Description:** FP check: centroid offset indicates an off-target eclipsing binary.
 
@@ -1467,7 +1467,7 @@ offset
 optimize_period_duration_grid_sizes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20364>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20364>`__
 
 **Description:** No description available in the source docstring.
 
@@ -1480,7 +1480,7 @@ optimize_period_duration_grid_sizes
 outlier_removal
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15322>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15322>`__
 
 **Description:** Sliding-window sigma-clipping outlier removal on the detrended light curve.
 
@@ -1493,7 +1493,7 @@ outlier_removal
 p2p_rms
 ~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19459>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19459>`__
 
 **Description:** Compute the point-to-point RMS of a light curve as a robust noise proxy.
 
@@ -1506,7 +1506,7 @@ p2p_rms
 patch_EDIVetter_Unplugged
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7>`__
 
 **Description:** Patch the EDIunplugged package by replacing deprecated 'np.float' with 'float' in Python scripts. This patch is only applied if the installed version of EDIunplugged is "0.1.3".
 
@@ -1519,7 +1519,7 @@ patch_EDIVetter_Unplugged
 pd_to_lk
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31881>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L31881>`__
 
 **Description:** Convert a NEMESIS ''LC\_df'' DataFrame to a ''lightkurve.LightCurve'' object.
 
@@ -1532,7 +1532,7 @@ pd_to_lk
 phasefold
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19381>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19381>`__
 
 **Description:** Phase-fold a light curve with the transit centred at phase zero.
 
@@ -1545,7 +1545,7 @@ phasefold
 pipeline_quality_mask
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1083>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1083>`__
 
 **Description:** Applies a quality mask to a given TESS data quality array based on the desired bitmask setting.
 
@@ -1558,7 +1558,7 @@ pipeline_quality_mask
 PLD_model
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14915>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14915>`__
 
 **Description:** Two-pass Pixel Level Decorrelation (PLD) with GP-proxy variance inflation.
 
@@ -1571,7 +1571,7 @@ PLD_model
 plot_centroids_in_phase
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22172>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22172>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1584,7 +1584,7 @@ plot_centroids_in_phase
 plot_cutouts_ALT
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12568>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12568>`__
 
 **Description:** Drop-in alternative to ''plot\_cutouts'' with a ''catalog\_source'' switch.
 
@@ -1597,7 +1597,7 @@ plot_cutouts_ALT
 plot_cutouts_ALTb
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11793>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11793>`__
 
 **Description:** Drop-in alternative to ''plot\_cutouts'' with a ''catalog\_source'' switch.
 
@@ -1610,7 +1610,7 @@ plot_cutouts_ALTb
 plot_dss_orientation
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22724>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22724>`__
 
 **Description:** Fetch a DSS optical stamp, reproject it onto the TESS WCS pixel grid, and render it with N/E arrows and TESS aperture/background mask overlays.
 
@@ -1623,7 +1623,7 @@ plot_dss_orientation
 plot_dss_sources
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12961>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12961>`__
 
 **Description:** Overlay catalog sources on the reprojected DSS panel.
 
@@ -1636,7 +1636,7 @@ plot_dss_sources
 plot_image
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22033>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22033>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1649,7 +1649,7 @@ plot_image
 plot_image_ALT
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12701>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12701>`__
 
 **Description:** Plot the TESS FFI/TPF median-image cutout with aperture/background masks and catalog source overlay (TIC or Gaia DR3).
 
@@ -1662,7 +1662,7 @@ plot_image_ALT
 plot_image_and_mask
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11466>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11466>`__
 
 **Description:** This function will plot the Full Frame Image or Target Pixel File (FFI/TPF) images and input aperture and background pixel masks.
 
@@ -1675,7 +1675,7 @@ plot_image_and_mask
 plot_it_all_up
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15788>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15788>`__
 
 **Description:** Unified LC summary figure for both single-sector and multi-sector runs.
 
@@ -1688,7 +1688,7 @@ plot_it_all_up
 plot_LEO_Vetter_text_results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30314>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30314>`__
 
 **Description:** No description available in the source docstring.
 
@@ -1701,7 +1701,7 @@ plot_LEO_Vetter_text_results
 plot_mask
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11381>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11381>`__
 
 **Description:** This function is used to plot a pixel mask on a subplot.
 
@@ -1714,7 +1714,7 @@ plot_mask
 plot_mirrored_transits_and_collect_vetting_metrics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27157>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27157>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1727,7 +1727,7 @@ plot_mirrored_transits_and_collect_vetting_metrics
 plot_modshift_NEMESIS
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30383>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30383>`__
 
 **Description:** Compute LEO-Vetter transit metrics and render the modshift diagnostic figure.
 
@@ -1740,7 +1740,7 @@ plot_modshift_NEMESIS
 plot_odd_even_transits
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21538>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21538>`__
 
 **Description:** This function will plot the odd and even numbered transits that are modeled by TLS in the input subplot of a pyplot figure.
 
@@ -1753,7 +1753,7 @@ plot_odd_even_transits
 plot_orientation
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10640>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10640>`__
 
 **Description:** This function will use the TESS Full Frame Image (FFI) or Target Pixel File (TPF) image headers to determine the North and East orientation for plotting the median image flux.
 
@@ -1766,7 +1766,7 @@ plot_orientation
 plot_page3_text
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27287>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27287>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1779,7 +1779,7 @@ plot_page3_text
 plot_phasefold_LCs
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21858>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21858>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1792,7 +1792,7 @@ plot_phasefold_LCs
 plot_power_spectra
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21741>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21741>`__
 
 **Description:** This function will plot the TLS power spectrum resulting from the TLS transit search.
 
@@ -1805,7 +1805,7 @@ plot_power_spectra
 plot_sources
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11534>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11534>`__
 
 **Description:** This function will plot catalog sources and centroid positions.
 
@@ -1818,7 +1818,7 @@ plot_sources
 plot_sources_gaia
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12111>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12111>`__
 
 **Description:** Overlay Gaia DR3 sources on a TESS cutout with PM correction to the cutout epoch.
 
@@ -1831,7 +1831,7 @@ plot_sources_gaia
 plot_sources_TIC
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11912>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11912>`__
 
 **Description:** Tpfplotter-style TIC source overlay on a TESS cutout.
 
@@ -1844,7 +1844,7 @@ plot_sources_TIC
 plot_text
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23096>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23096>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -1857,7 +1857,7 @@ plot_text
 preclean_SAP_BKG_Centroids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6134>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6134>`__
 
 **Description:** Pre-clean SAP flux, background, and centroids before PLD/detrending.
 
@@ -1870,7 +1870,7 @@ preclean_SAP_BKG_Centroids
 prefetch_prf
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7023>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7023>`__
 
 **Description:** Pre-download TESS PRF FITS files from MAST for the epochs required by ''sectors''.
 
@@ -1883,7 +1883,7 @@ prefetch_prf
 prefetch_quaternions
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6852>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6852>`__
 
 **Description:** Pre-download and cache TESS engineering quaternion FITS files for every sector in \*sectors\* before LC creation begins.
 
@@ -1896,7 +1896,7 @@ prefetch_quaternions
 quick_outlier_removal
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14571>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14571>`__
 
 **Description:** Fast sliding-window outlier mask for a single flux column.
 
@@ -1909,7 +1909,7 @@ quick_outlier_removal
 readNDarr
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5729>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5729>`__
 
 **Description:** Deserialize a pickle (.pkl) file written by ''saveNDarr''.
 
@@ -1922,7 +1922,7 @@ readNDarr
 recursive_search
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L325>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L325>`__
 
 **Description:** Recursively find files under a directory tree matching a filename pattern.
 
@@ -1935,7 +1935,7 @@ recursive_search
 refine_transit_epoch_post_search
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20429>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20429>`__
 
 **Description:** Refine a detected transit epoch after BLS/TLS using a guarded box-matched depth/SNR score.
 
@@ -1948,7 +1948,7 @@ refine_transit_epoch_post_search
 ResampleLinear1D
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20352>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L20352>`__
 
 **Description:** No description available in the source docstring.
 
@@ -1961,7 +1961,7 @@ ResampleLinear1D
 robust_transit_depth
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25385>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25385>`__
 
 **Description:** Robust estimation of transit depth using sigma clipping, quantiles, and fallback strategies.
 
@@ -1974,7 +1974,7 @@ robust_transit_depth
 running_mean
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5570>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5570>`__
 
 **Description:** This function will calculate a mean value for a given window of time.
 
@@ -1987,7 +1987,7 @@ running_mean
 running_median
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5523>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5523>`__
 
 **Description:** This function will calculate a median value for a given window of time.
 
@@ -2000,7 +2000,7 @@ running_median
 safe_cleanup_cache
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2457>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2457>`__
 
 **Description:** Best-effort cleanup of files under the ONE cache root indicated by default\_settings. Mirrors your old behavior but without hardcoded /mnt/... paths. When ''shard\_cache\_by\_tic'' is enabled and ''tic\_id'' is provided…
 
@@ -2013,7 +2013,7 @@ safe_cleanup_cache
 safe_panel_normalization
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27803>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27803>`__
 
 **Description:** Normalize a per-panel flux/error pair by a guaranteed-positive scale.
 
@@ -2026,7 +2026,7 @@ safe_panel_normalization
 SAP
 ~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7870>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7870>`__
 
 **Description:** Simple Aperture Photometry with simultaneous, flux-independent quality flagging.
 
@@ -2039,7 +2039,7 @@ SAP
 SAP_ALT5
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L9719>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L9719>`__
 
 **Description:** Simple Aperture Photometry with fully coupled aperture evaluation.
 
@@ -2052,7 +2052,7 @@ SAP_ALT5
 SAP_and_BKG_uncertainty
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6447>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6447>`__
 
 **Description:** Propagate photon and readout noise into SAP and background flux uncertainties.
 
@@ -2065,7 +2065,7 @@ SAP_and_BKG_uncertainty
 saveNDarr
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5679>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5679>`__
 
 **Description:** Serialize an arbitrary Python object to a pickle (.pkl) file.
 
@@ -2078,7 +2078,7 @@ saveNDarr
 scramble_hdu_orbits
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L17150>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L17150>`__
 
 **Description:** Swap the two TESS orbit image-frame blocks within a single-sector HDU, preserving the original time array.
 
@@ -2091,7 +2091,7 @@ scramble_hdu_orbits
 search_sectors_from_filetype_and_path
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4738>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4738>`__
 
 **Description:** Discover which TESS sectors have processed light curves on disk.
 
@@ -2104,7 +2104,7 @@ search_sectors_from_filetype_and_path
 secondary
 ~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29996>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29996>`__
 
 **Description:** FP check: significant secondary eclipse detected.
 
@@ -2117,7 +2117,7 @@ secondary
 single_event
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29167>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29167>`__
 
 **Description:** FA check: signal dominated by a single event.
 
@@ -2130,7 +2130,7 @@ single_event
 singleoutliers
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15269>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L15269>`__
 
 **Description:** This function will search input data for points that are not consecutive.
 
@@ -2143,7 +2143,7 @@ singleoutliers
 sinusoidal
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29346>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29346>`__
 
 **Description:** FA check: signal consistent with sinusoidal variability.
 
@@ -2156,7 +2156,7 @@ sinusoidal
 Smoother
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14202>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14202>`__
 
 **Description:** Smooth the PLD-corrected light curve with a biweight running window.
 
@@ -2169,7 +2169,7 @@ Smoother
 symmetry_window_is_degenerate
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25946>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25946>`__
 
 **Description:** Decide whether the left/right mirror symmetry test can run at all.
 
@@ -2182,7 +2182,7 @@ symmetry_window_is_degenerate
 T14
 ~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13764>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13764>`__
 
 **Description:** Estimate the total transit duration (T14) for a planet using Kepler's third law and transit geometry.
 
@@ -2195,7 +2195,7 @@ T14
 T23
 ~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13822>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13822>`__
 
 **Description:** Estimate the transit duration between the second and third contact points (T23).
 
@@ -2208,7 +2208,7 @@ T23
 TESS_Sector_observation_check
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13225>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13225>`__
 
 **Description:** This function will return the TESS timestamps corresponding to the beginning of the first to the end of the second orbit per TESS sector of observations. Values are interpretted from the TESS Data Release Notes…
 
@@ -2221,7 +2221,7 @@ TESS_Sector_observation_check
 TesscutCounterSemaphore
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2604>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2604>`__
 
 **Description:** Cross-process semaphore using a single integer counter file.
 
@@ -2234,7 +2234,7 @@ TesscutCounterSemaphore
 tesssearch_with_radius_growth
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2712>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2712>`__
 
 **Description:** Perform lksearch.TESSSearch with an expanding search radius when the initial sector-constrained query raises a SearchError or yields no matching rows.
 
@@ -2247,7 +2247,7 @@ tesssearch_with_radius_growth
 thresholdmask
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5290>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5290>`__
 
 **Description:** Build a source aperture mask from pixels above a MAD-scaled threshold.
 
@@ -2260,7 +2260,7 @@ thresholdmask
 timer
 ~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L370>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L370>`__
 
 **Description:** Print the wall-clock runtime of a pipeline step in human-readable units.
 
@@ -2273,7 +2273,7 @@ timer
 TLS_func
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19515>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19515>`__
 
 **Description:** This function will perform a transit search on the input light curve using the Transit Least Squares (TLS, Hippke & Heller et al. 2019, https://arxiv.org/pdf/1901.02015.pdf) algorithm. Run the Transit Least Squares…
 
@@ -2286,7 +2286,7 @@ TLS_func
 transit_injection
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L16902>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L16902>`__
 
 **Description:** Inject a limb-darkened transit into a TESS-like light curve using BATMAN.
 
@@ -2299,7 +2299,7 @@ transit_injection
 Transit_plot
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21275>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21275>`__
 
 **Description:** Save a 2×2 transit search summary figure for the best-fit BLS or TLS signal.
 
@@ -2312,7 +2312,7 @@ Transit_plot
 TransitSearch
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21167>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L21167>`__
 
 **Description:** Dispatcher that runs either BLS or TLS on the input light curve.
 
@@ -2325,7 +2325,7 @@ TransitSearch
 try_apertures
 ~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7648>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7648>`__
 
 **Description:** Grid-search over aperture definitions and select the one minimising CDPP × (1 + contamination ratio).
 
@@ -2338,7 +2338,7 @@ try_apertures
 unphysical_duration
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29417>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29417>`__
 
 **Description:** FA check: transit duration is unphysically short or long.
 
@@ -2351,7 +2351,7 @@ unphysical_duration
 verify_cutout_identity
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3103>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3103>`__
 
 **Description:** Check that a cutout (TESScut or TPF) is the requested sector and the requested star.
 
@@ -2364,7 +2364,7 @@ verify_cutout_identity
 verify_lc_matches_cutout
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2924>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2924>`__
 
 **Description:** Check that a light curve's time stamps come from the cutout it was extracted from.
 
@@ -2377,7 +2377,7 @@ verify_lc_matches_cutout
 verify_lc_sector_by_time
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3039>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3039>`__
 
 **Description:** Check that a light curve's first and last times fall in the requested sector. This is your ''TESS\_Sector\_observation\_check(T0=np.min(...))'' and ''(T0=np.max(...))'' test, run automatically.
 
@@ -2390,7 +2390,7 @@ verify_lc_sector_by_time
 verify_written_lc
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2987>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2987>`__
 
 **Description:** Re-read the Time column of a just-written light curve and compare it with the times held in memory. Catches a file on disk that is not the one this process wrote. A file that is not on disk is noted, not failed.
 
@@ -2403,7 +2403,7 @@ verify_written_lc
 Vet_with_EDIVetter
 ~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19424>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L19424>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -2416,7 +2416,7 @@ Vet_with_EDIVetter
 Vetting_Report
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23354>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23354>`__
 
 **Description:** Produce page 1 of the NEMESIS vetting report for a BLS or TLS transit signal.
 
@@ -2429,7 +2429,7 @@ Vetting_Report
 Vetting_Report_2nd_page
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24721>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24721>`__
 
 **Description:** Produce page 2 of the NEMESIS vetting report: the full LC summary figure.
 
@@ -2442,7 +2442,7 @@ Vetting_Report_2nd_page
 Vetting_Report_3rd_page
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24916>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L24916>`__
 
 **Description:** Produce page 3 of the NEMESIS vetting report: LS periodogram and phase-folded light curves.
 
@@ -2455,7 +2455,7 @@ Vetting_Report_3rd_page
 Vetting_Report_4th_page
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27543>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27543>`__
 
 **Description:** Produce page 4 of the NEMESIS vetting report: centroid analysis and transit symmetry tests.
 
@@ -2468,7 +2468,7 @@ Vetting_Report_4th_page
 Vetting_Report_5th_page_plot_individual_transits
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28262>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28262>`__
 
 **Description:** Produce page 5 of the NEMESIS vetting report: individual transit zoom-ins.
 
@@ -2481,7 +2481,7 @@ Vetting_Report_5th_page_plot_individual_transits
 Vetting_Report_6th_page_LEOVetter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30633>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30633>`__
 
 **Description:** Produce page 6 of the NEMESIS vetting report: LEO-Vetter modshift analysis.
 
@@ -2494,7 +2494,7 @@ Vetting_Report_6th_page_LEOVetter
 Vetting_Report_multi_page
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30759>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L30759>`__
 
 **Description:** Produce pages 2–6 of the NEMESIS vetting report and merge all pages into a single multi-page PDF.
 
@@ -2507,7 +2507,7 @@ Vetting_Report_multi_page
 vshaped
 ~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29862>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L29862>`__
 
 **Description:** FP check: V-shaped transit event (consistent with a grazing eclipsing binary).
 
@@ -2520,7 +2520,7 @@ vshaped
 weak
 ~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28733>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28733>`__
 
 **Description:** FA check: signal too weak (MES below minimum threshold).
 
@@ -2533,7 +2533,7 @@ weak
 while_loop
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L464>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L464>`__
 
 **Description:** Call 'command(\*args, \*\*kwargs)' with exponential back‑off. Stops after 'max\_retries' failures (None = infinite). Returns the function’s result or raises the last exception.
 
@@ -2549,7 +2549,7 @@ Private and internal helpers
 _apply_outlier_flag
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7463>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7463>`__
 
 **Description:** Set QUALITY\_FLAG = 3 on cadences identified by outlier\_removal().
 
@@ -2562,7 +2562,7 @@ _apply_outlier_flag
 _bitmask_to_flag_ids
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7409>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7409>`__
 
 **Description:** Convert stored bitmask value into flag identities.
 
@@ -2575,7 +2575,7 @@ _bitmask_to_flag_ids
 _bitmask_to_flag_string
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7433>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7433>`__
 
 **Description:** Human-readable representation for CSV export.
 
@@ -2588,7 +2588,7 @@ _bitmask_to_flag_string
 _bootstrap_fap
 ~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23967>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23967>`__
 
 **Description:** Estimate FAP by counting how often a shuffled light curve exceeds the observed peak power. O(n\_bootstrap × N\_freq) — keep n\_bootstrap ≤ 200.
 
@@ -2601,7 +2601,7 @@ _bootstrap_fap
 _cache_lock_name
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2541>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2541>`__
 
 **Description:** Build a narrow-scope lock filename so only jobs touching the same resource serialize. Examples: flatten\_TESSCut\_s0001\_cam1\_ccd4.lock flatten\_TESS\_s0001\_tic\_24195569.lock flatten\_TESSCut\_generic.lock (fallback)
 
@@ -2614,7 +2614,7 @@ _cache_lock_name
 _cache_root_from_settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2448>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2448>`__
 
 **Description:** Resolve the canonical cache root (your existing cache path). All cache activity (TESScut/TPF/DSS) uses this path.
 
@@ -2627,7 +2627,7 @@ _cache_root_from_settings
 _CacheLock
 ~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2564>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2564>`__
 
 **Description:** Best-effort file lock based on creating a lockfile. Scope is controlled by the lock name you pass in. Lock file is removed on exit; failures to remove are ignored.
 
@@ -2640,7 +2640,7 @@ _CacheLock
 _check_harmonic
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23943>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23943>`__
 
 **Description:** Check whether the 2P candidate has higher power than P, which would indicate p\_peak is actually P\_rot/2.
 
@@ -2653,7 +2653,7 @@ _check_harmonic
 _compute_per_cadence_centroid
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L8772>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L8772>`__
 
 **Description:** Compute per-cadence quadratic centroids using an independent loose threshold mask, NOT the PRF pix\_mask, eliminating the self-referential bias present in the original SAP\_ALT2 Step 4 inline centroid loop.
 
@@ -2666,7 +2666,7 @@ _compute_per_cadence_centroid
 _decorate_quality_columns
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7443>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7443>`__
 
 **Description:** Ensure QUALITY\_FLAG is int16 bitmask and attach readable QUALITY\_FLAGS.
 
@@ -2679,7 +2679,7 @@ _decorate_quality_columns
 _detect_deep_dips
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14689>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L14689>`__
 
 **Description:** Flag downward outliers in PLD residuals as candidate transit cadences.
 
@@ -2692,7 +2692,7 @@ _detect_deep_dips
 _ensure_hdu_or_raise
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L280>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L280>`__
 
 **Description:** Raise NoImageDataError if nothing usable is in hdu.
 
@@ -2705,7 +2705,7 @@ _ensure_hdu_or_raise
 _ensure_hdu_or_raise_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L272>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L272>`__
 
 **Description:** Raise NoImageDataError if nothing usable is in hdu.
 
@@ -2718,7 +2718,7 @@ _ensure_hdu_or_raise_OLD
 _ensure_tesscut_dirs
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1668>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1668>`__
 
 **Description:** Make sure astroquery's expected dirs exist under the cache tree. Avoids FileNotFoundError for .../mastDownload/TESSCut/tesscut\_\*.zip
 
@@ -2731,7 +2731,7 @@ _ensure_tesscut_dirs
 _filter_lc_by_quality_flags
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7510>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7510>`__
 
 **Description:** Return a copy of lc\_df keeping only rows whose QUALITY\_FLAG is consistent with the requested allowed flag-ids.
 
@@ -2744,7 +2744,7 @@ _filter_lc_by_quality_flags
 _flag_ids_to_bitmask
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7387>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7387>`__
 
 **Description:** Convert flag identities like [1,2,3] into bitmask sum 1+2+4 = 7.
 
@@ -2757,7 +2757,7 @@ _flag_ids_to_bitmask
 _flatten_to_cache
 ~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1549>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L1549>`__
 
 **Description:** Move files downloaded by 'lksearch' into a cache/mastDownload directory.
 
@@ -2770,7 +2770,7 @@ _flatten_to_cache
 _fmt_elapsed
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4090>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4090>`__
 
 **Description:** Format a duration for log lines: seconds below 2 minutes, else minutes.
 
@@ -2783,7 +2783,7 @@ _fmt_elapsed
 _get_cached_fits
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2032>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2032>`__
 
 **Description:** Fast lookup of a cached TESScut FITS using deterministic paths first, then a tiny per-key SQLite index to avoid directory-wide scans.
 
@@ -2796,7 +2796,7 @@ _get_cached_fits
 _gethdu_diag_key
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4114>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4114>`__
 
 **Description:** Build the (TIC, sector) key used by the retrieval record.
 
@@ -2809,7 +2809,7 @@ _gethdu_diag_key
 _gethdu_lksearch_unverified
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3274>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3274>`__
 
 **Description:** Download a single TESS FFI cutout or TPF from MAST via lksearch.
 
@@ -2822,7 +2822,7 @@ _gethdu_lksearch_unverified
 _gethdu_lksearch_verified
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3779>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3779>`__
 
 **Description:** Return the cutout for one TIC ID and one sector, verified to be that star and that sector, or None if no verified cutout can be obtained.
 
@@ -2835,7 +2835,7 @@ _gethdu_lksearch_verified
 _ls_results_for_flux
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23989>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L23989>`__
 
 **Description:** Compute all Lomb-Scargle metrics for a single flux array.
 
@@ -2848,7 +2848,7 @@ _ls_results_for_flux
 _nemesis_skyview_stamp
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22423>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22423>`__
 
 **Description:** Fetch a sky survey image stamp and return ''(stamp, header)''.
 
@@ -2861,7 +2861,7 @@ _nemesis_skyview_stamp
 _normalize_gethdu_outputs
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4433>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4433>`__
 
 **Description:** Ensure that all five ''gethdu'' return values are Python \*lists\* of equal length, regardless of whether one or multiple sectors were returned.
 
@@ -2874,7 +2874,7 @@ _normalize_gethdu_outputs
 _per_transit_snr
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28080>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28080>`__
 
 **Description:** Compute a simple per-transit SNR for a single event.
 
@@ -2887,7 +2887,7 @@ _per_transit_snr
 _prf_weighted_flux_pass
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L8879>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L8879>`__
 
 **Description:** Per-cadence PRF-weighted flux extraction with corrected normalization and improved acceptance criteria. Replaces the Step 4b inline block in the original SAP\_ALT2.
 
@@ -2900,7 +2900,7 @@ _prf_weighted_flux_pass
 _record_gethdu_diag
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4147>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4147>`__
 
 **Description:** Store the latest retrieval outcome for one (TIC, sector).
 
@@ -2913,7 +2913,7 @@ _record_gethdu_diag
 _resolve_prf_cache_dir
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6972>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6972>`__
 
 **Description:** Resolve the PRF cache directory from NEMESIS settings.
 
@@ -2926,7 +2926,7 @@ _resolve_prf_cache_dir
 _resolve_quat_savepath
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6806>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L6806>`__
 
 **Description:** Derive a canonical quaternion cache directory from default\_settings and write it back as default\_settings['quat\_savepath'].
 
@@ -2939,7 +2939,7 @@ _resolve_quat_savepath
 _resolve_target_sectors
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7193>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7193>`__
 
 **Description:** Return the concrete list of sector ints that full\_pipeline will process.
 
@@ -2952,7 +2952,7 @@ _resolve_target_sectors
 _restore_full_length_lc
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7595>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L7595>`__
 
 **Description:** Rebuild a full-length LC dataframe from compact good-cadence results.
 
@@ -2965,7 +2965,7 @@ _restore_full_length_lc
 _run_cutouts_ALT
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12871>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L12871>`__
 
 **Description:** Internal helper called by plot\_image\_ALT. Runs the full cutout plot and returns (gaia\_df, target\_gaia\_id).
 
@@ -2978,7 +2978,7 @@ _run_cutouts_ALT
 _sec_str
 ~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4411>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4411>`__
 
 **Description:** Safe sector string for logs; won’t blow up on numpy/list types.
 
@@ -2991,7 +2991,7 @@ _sec_str
 _select_transit_indices
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28142>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L28142>`__
 
 **Description:** Return (selected\_indices, tier\_labels) for stratified SNR-ranked selection.
 
@@ -3004,7 +3004,7 @@ _select_transit_indices
 _tesspoint_note
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4220>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4220>`__
 
 **Description:** State tess-point's prediction for one star and sector, as one sentence.
 
@@ -3017,7 +3017,7 @@ _tesspoint_note
 _wait_for_paths
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2504>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2504>`__
 
 **Description:** Wait until each path in 'paths' exists and has stable size for 'stable\_reads' polls. Early-exits as soon as condition is met for any path (you'll open just one). Returns True if any path stabilized; False otherwise.
 
@@ -3033,7 +3033,7 @@ Legacy-named definitions
 all_transit_times_OLD
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27721>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27721>`__
 
 **Description:** Return all mid-transit times within t
 
@@ -3046,7 +3046,7 @@ all_transit_times_OLD
 centroid_analysis_OLD
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26593>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L26593>`__
 
 **Description:** See source for parameters and behavior.
 
@@ -3059,7 +3059,7 @@ centroid_analysis_OLD
 check_transit_symmetry_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25652>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L25652>`__
 
 **Description:** Checks the symmetry of the transit by comparing the left and right mirrored transit depths and durations. Returns a pass/fail result based on predefined thresholds.
 
@@ -3072,7 +3072,7 @@ check_transit_symmetry_OLD
 create_circular_mask_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5187>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L5187>`__
 
 **Description:** Create a circular boolean aperture mask centred on a reference pixel.
 
@@ -3085,7 +3085,7 @@ create_circular_mask_OLD
 gethdu_lksearch_OLD
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3928>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L3928>`__
 
 **Description:** Return the cutout for one TIC ID and one sector, verified to be that star and that sector, or None if no verified cutout can be obtained.
 
@@ -3098,7 +3098,7 @@ gethdu_lksearch_OLD
 LC_creation_OLD
 ~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L17992>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L17992>`__
 
 **Description:** Produce processed TESS light curves for one or more sectors using the NEMESIS pipeline (Feliz et al. 2021, https://arxiv.org/abs/2103.05647).
 
@@ -3111,7 +3111,7 @@ LC_creation_OLD
 mann2019_mass_radius_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10970>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L10970>`__
 
 **Description:** Estimate M-dwarf stellar mass and radius from absolute K-band magnitude using the empirical polynomial relations of Mann et al. 2019 (mass) and Mann et al. 2015 (radius).
 
@@ -3124,7 +3124,7 @@ mann2019_mass_radius_OLD
 mask_out_neighbor_pixels_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L9060>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L9060>`__
 
 **Description:** Excise aperture pixels contaminated by neighboring stars, with a separation-based gate that escalates sub-pixel blends to PRF decontamination rather than attempting pixel excision.
 
@@ -3137,7 +3137,7 @@ mask_out_neighbor_pixels_OLD
 plot_cutouts_OLD
 ~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11657>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11657>`__
 
 **Description:** This function will plot the median flux image of the input Full Frame Image or Target Pixel File (FFI/TPF) along with the input photometric aperture and background flux pixel masks.
 
@@ -3150,7 +3150,7 @@ plot_cutouts_OLD
 plot_dss_orientation_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22328>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22328>`__
 
 **Description:** Fetch DSS and draw N/E. If anything fails (DNS/HTTP/WCS/FITS), place 'No DSS image' text and return cleanly. Uses the SAME cache root as TESScut/TPF (downloadpath).
 
@@ -3163,7 +3163,7 @@ plot_dss_orientation_OLD
 plot_image_and_mask_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11406>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L11406>`__
 
 **Description:** This function will plot the Full Frame Image or Target Pixel File (FFI/TPF) images and input aperture and background pixel masks.
 
@@ -3176,7 +3176,7 @@ plot_image_and_mask_OLD
 safe_skyview_stamp_OLD
 ~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22257>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L22257>`__
 
 **Description:** Wrapper around astrobase.plotbase.skyview\_stamp that ALWAYS returns (stamp, hdr) and NEVER raises. On any failure, returns (None, None).
 
@@ -3189,7 +3189,7 @@ safe_skyview_stamp_OLD
 search_sectors_from_filetype_and_path_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4829>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L4829>`__
 
 **Description:** Discover which TESS sectors have processed light curves on disk.
 
@@ -3202,7 +3202,7 @@ search_sectors_from_filetype_and_path_OLD
 Smoother_OLD
 ~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13905>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L13905>`__
 
 **Description:** Smooth the PLD-corrected light curve with a biweight running window.
 
@@ -3215,7 +3215,7 @@ Smoother_OLD
 transit_injection_OLD
 ~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L16622>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L16622>`__
 
 **Description:** Injects a limb-darkened transit into a TESS-like light curve using the BATMAN package.
 
@@ -3228,7 +3228,7 @@ transit_injection_OLD
 Vetting_Report_5th_page_plot_individual_transits_OLD
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27868>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L27868>`__
 
 **Description:** Produce page 5 of the NEMESIS vetting report: individual transit zoom-ins.
 
@@ -3244,7 +3244,7 @@ Class methods
 _CacheLock.__enter__
 ~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2575>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2575>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3257,7 +3257,7 @@ _CacheLock.__enter__
 _CacheLock.__exit__
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2589>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2589>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3270,7 +3270,7 @@ _CacheLock.__exit__
 _CacheLock.__init__
 ~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2570>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2570>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3283,7 +3283,7 @@ _CacheLock.__init__
 TesscutCounterSemaphore.__enter__
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2663>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2663>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3296,7 +3296,7 @@ TesscutCounterSemaphore.__enter__
 TesscutCounterSemaphore.__exit__
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2683>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2683>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3309,7 +3309,7 @@ TesscutCounterSemaphore.__exit__
 TesscutCounterSemaphore.__init__
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2633>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2633>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3322,7 +3322,7 @@ TesscutCounterSemaphore.__init__
 TesscutCounterSemaphore._read_count
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2649>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2649>`__
 
 **Description:** No description available in the source docstring.
 
@@ -3335,7 +3335,7 @@ TesscutCounterSemaphore._read_count
 TesscutCounterSemaphore._write_count
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2659>`_
+**Location:** ``nemesis_tess.pipeline`` — `View source <https://github.com/daxfeliz/NEMESIS/blob/main/src/nemesis_tess/pipeline.py#L2659>`__
 
 **Description:** No description available in the source docstring.
 
