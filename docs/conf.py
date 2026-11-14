@@ -10,6 +10,7 @@ source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
 master_doc = "index"
 exclude_patterns = ["_build", "**/.ipynb_checkpoints"]
 html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]
 html_title = "NEMESIS — TESS M-dwarf transit survey"
 
 # Explicitly forbid runtime use of remote services, notebook fits, or local data.
