@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: >-
+  If you use NEMESIS, please cite Feliz et al. (2021, AJ, 161, 247,
+  DOI: 10.3847/1538-3881/abedb3). Also cite the NEMESIS II paper once it
+  is publicly available; at present it is in preparation.
+title: NEMESIS — Exoplanet TraNsit SurvEy of Nearby M-dwarfs in TESS FFIs
+type: software
+authors:
+  - family-names: Feliz
+    given-names: Dax L.
+repository-code: https://github.com/daxfeliz/NEMESIS
+url: https://nemesis-tess.readthedocs.io/en/latest/
+version: '1.96'
+license: MIT
