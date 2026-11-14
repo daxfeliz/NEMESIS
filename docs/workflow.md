@@ -58,10 +58,8 @@ J12394672+0410471) and finds a ~4.143-day Lomb-Scargle peak. Our notebook
 runs only the relevant TESS Sector 23 and uses `PLD Flux`; the period is
 a candidate, to be checked for aliases and spot evolution.
 
-The flare case uses the same simple threshold idea as the PDF, with
-`N1=2`, `N2=1`, `N3=3`. The PDF's heading mentions TIC 388857263
-(Proxima Centauri), but the *executed code and downloaded sectors* use TIC
-260506296, Sectors 1–3. We use that executed TIC. The PDF's `Nsigma=[inf,2]`
-clips positive PLD outliers with v1.96; the notebook disables the pipeline's
-final outlier-removal step to preserve prospective flares, and corrects a
-plotting variable typo. This is **not** a published FINDFLARE implementation.
+The flare demonstration uses TIC 260506296, Sectors 1–3, and the simple
+three-cadence threshold parameters `N1=2`, `N2=1`, `N3=3`. It disables
+the final outlier-removal step in order to retain positive flux excursions,
+which may otherwise be discarded during preprocessing. The detector is
+illustrative, not a validated FINDFLARE implementation.

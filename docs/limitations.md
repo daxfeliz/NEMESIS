@@ -1,40 +1,15 @@
-# Limitations, security, and scientific interpretation
+# Scientific scope, limitations, and security
 
-**Status.** This is a proposed documentation/tutorial addition, not a
-new supported API surface. The scientific `pipeline.py` and package
-metadata are unchanged. The 3 external NEMESIS II wrappers live in
-`examples/reference_wrappers/`, not in `nemesis_tess` itself.
+**Package scope.** The installed `nemesis_tess` package provides the main NEMESIS extraction, detrending, BLS/TLS transit-search, and vetting-report pipeline. The jaxoplanet and TRICERATOPS reference modules under `examples/reference_wrappers/` illustrate subsequent NEMESIS II characterization stages but are **not installed public APIs**. The [API inventory](api_reference.rst) distinguishes supported entry points from internal and legacy functions.
 
-**jaxoplanet modeling.** `nemesis_jaxoplanet_refit.py` is now included as
-supplied. The tutorial uses its genuine limb-darkened NUTS model, but a
-short demonstration does not certify its runtime or posterior quality. The
-wrapper requires valid limb-darkening inputs (`u_fixed` or model columns),
-and its stellar-density prior prints unit cross-checks. Inspect R-hat, ESS,
-divergences, and radius-prior truncation on real science fits.
+**Detection and vetting.** A threshold-crossing event, a NEMESIS planet-candidate detection, a statistically favored planetary scenario, and a validated/confirmed planet are different concepts. The NEMESIS II manuscript uses automatic LEO-Vetter diagnostics to label detections, while injection/recovery and orbit-scrambling provide *population-level* sensitivity and false-alarm information; neither constitutes independent confirmation of a planet. A single-sector search is primarily sensitive to short orbital periods and can miss weaker planets in multi-planet systems.
 
-**TRICERATOPS security.** The supplied wrapper temporarily disables TLS
-certificate verification for `stev.oapd.inaf.it` during some TRILEGAL
-requests. This weakens server authentication. Prefer a trustworthy
-pre-staged TRILEGAL population or a proper verified certificate chain.
-Do not present these network workarounds as a general-purpose standard
-without review. The notebook is opt-in and off by default.
+**jaxoplanet modeling.** `nemesis_jaxoplanet_refit.py` is supplied in the reference scripts. Short tutorial chains are intended to demonstrate the workflow, not to certify a posterior. Inspect R-hat, effective sample sizes, divergences, radius-prior truncation, and appropriate stellar-parameter priors before reporting scientific parameters.
 
-**FPP interpretation.** Reported FPP/NFPP depend on aperture geometry,
-field-star priors, transit assumptions, and Monte Carlo draws. A 1-trial
-smoke run is not a disposition; at 30-minute cadence the wrapper
-intentionally does not use TRICERATOPS's most stringent planet-validation
-tier without better-cadence evidence.
+**TRICERATOPS security.** The supplied reference wrapper contains a narrowly scoped workaround that temporarily disables TLS certificate verification for some TRILEGAL requests to `stev.oapd.inaf.it`. This weakens server authentication; prefer a verified certificate chain or trusted pre-staged background populations and review this path before adopting it for production or untrusted networks.
 
-**Rotation.** Use photometry retaining stellar variability (`PLD Flux` as
-in the supplied showcase), not necessarily planet-search detrending.
-A ~4.1-day period peak can have harmonics and activity evolution.
+**FPP/NFPP interpretation.** These probabilities depend on aperture geometry, background-star priors, observational cadence, the flux and depth supplied, and Monte Carlo sampling. A one-trial smoke test is **not** a scientific disposition. The NEMESIS II draft does not claim validation from 30-minute-cadence TRICERATOPS probabilities alone.
 
-**Flares.** The PDF example is an introductory threshold demonstration,
-not the original FINDFLARE implementation. The source notebook contained
-a plotting typo and an outlier threshold that could clip positive flares;
-these are corrected/documented rather than duplicated without explanation.
-Global MAD thresholds on variable stars require careful interpretation.
+**Rotation and flares.** For stellar rotation, analyze flux that retains rotational modulation rather than assuming a planet-search detrending preserves it. The simple threshold-based flare notebook is an educational demonstration, **not** a validated FINDFLARE implementation; real flare studies need a noise model, detection efficiency, and attention to false positives.
 
-**Documentation build.** Read the Docs renders notebooks without executing
-MAST downloads, NUTS sampling, TRICERATOPS population synthesis or plotting.
-All scientific runs require real input data and a separate local test.
+**Documentation builds.** Read the Docs renders saved notebook outputs without rerunning MAST downloads, NUTS fitting, or TRICERATOPS. Online scientific services may be unavailable independently of NEMESIS's Python environment.

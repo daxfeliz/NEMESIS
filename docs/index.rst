@@ -2,16 +2,19 @@ NEMESIS documentation
 =====================
 
 **NEMESIS** (Exoplanet TraNsit SurvEy of Nearby M-dwarfs in TESS FFIs)
-extracts and detrends TESS light curves, runs BLS and TLS, and generates
-vetting reports including LEO-Vetter diagnostics.
+is an open-source Python framework for extracting custom time-series
+photometry from TESS full-frame images, correcting instrumental effects
+with pixel-level decorrelation, searching for transits with BLS and TLS,
+and producing diagnostic reports with automated LEO-Vetter measurements.
 
-The NEMESIS II analysis flow additionally uses a separate jaxoplanet
-refit module and a separate TRICERATOPS validation wrapper. Those modules
-are not automatically part of the ``nemesis_tess`` install.
+The NEMESIS II survey additionally uses *separate* jaxoplanet and
+TRICERATOPS analysis wrappers and injection-recovery / orbit-scrambling
+controls. The separate wrappers shown in the tutorials are **not installed
+public APIs** of ``nemesis_tess``. See :doc:`workflow` for the distinctions.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Guides
+   :caption: Getting Started
 
    installation
    workflow
@@ -27,7 +30,21 @@ are not automatically part of the ``nemesis_tess`` install.
    notebooks/04_rotation_lomb_scargle
    notebooks/05_flare_threshold_search
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Reference
+
+   api_reference
+   function_index
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Project
+
+   citing
+   contributing
+
 .. note::
 
-   Notebooks are **not executed** by Read the Docs. Download and run them
-   locally with the appropriate dependencies and input data.
+   Read the Docs displays **saved notebook results** without executing
+   network downloads, transit searches, MCMC fits, or TRICERATOPS runs.
