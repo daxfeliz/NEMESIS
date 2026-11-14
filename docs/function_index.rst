@@ -14,7 +14,6 @@ A
 - :ref:`_apply_outlier_flag <api-nemesis-tess-pipeline-apply-outlier-flag>` — Set QUALITY\_FLAG = 3 on cadences identified by outlier\_removal().
 - :ref:`align_arrays <api-nemesis-tess-pipeline-align-arrays>` — Align the model flux to the data flux by interpolating the model flux to match the phase values of the data.
 - :ref:`all_transit_times <api-nemesis-tess-pipeline-all-transit-times>` — Return all predicted mid-transit times within the time span of t.
-- :ref:`all_transit_times_OLD <api-nemesis-tess-pipeline-all-transit-times-old>` — Return all mid-transit times within t
 - :ref:`append_PDF <api-nemesis-tess-pipeline-append-pdf>` — See source for parameters and behavior.
 - :ref:`apply_nan_to_flagged_rows <api-nemesis-tess-pipeline-apply-nan-to-flagged-rows>` — NaN non-preserved columns on cadences whose QUALITY\_FLAG indicates flux-corrupting events.
 - :ref:`Applying_Mdump_removal <api-nemesis-tess-pipeline-applying-mdump-removal>` — Apply momentum dump and sector jitter masking to a raw SAP light curve.
@@ -51,7 +50,6 @@ C
 - :ref:`CDPP <api-nemesis-tess-pipeline-cdpp>` — Compute the Combined Differential Photometric Precision (CDPP) of a light curve.
 - :ref:`center_cutout <api-nemesis-tess-pipeline-center-cutout>` — For TESS Full Frame Images (FFI), this function will try to center the FFI on the target star, much like how Target Pixel Files (TPF) are centered on the target star.
 - :ref:`centroid_analysis <api-nemesis-tess-pipeline-centroid-analysis>` — Compute a centroid motion diagnostic for a NEMESIS TCE and render it on the Page-4 vetting report axes.
-- :ref:`centroid_analysis_OLD <api-nemesis-tess-pipeline-centroid-analysis-old>` — See source for parameters and behavior.
 - :ref:`centroid_quadratic <api-nemesis-tess-pipeline-centroid-quadratic>` — This function computes the quadratic estimate of the centroid in a 2d-array. This method will fit a simple 2D second-order polynomial $P(x, y) = a + bx + cy + dx^2 + exy + fy^2$ to the 3x3 patch of pixels centered on…
 - :ref:`chases <api-nemesis-tess-pipeline-chases>` — FA check: events not unique in the local light curve (few transits).
 - :ref:`check_ALL_thresholds <api-nemesis-tess-pipeline-check-all-thresholds>` — Run all 17–18 LEO-Vetter FA/FP checks and return an aggregate flag.
@@ -59,7 +57,6 @@ C
 - :ref:`check_edge <api-nemesis-tess-pipeline-check-edge>` — This function is used to check if a polygon contains the edges of a Full Frame Image (FFI) or Target Pixel File (TPF).
 - :ref:`check_imports_are_installed <api-nemesis-tess-pipeline-check-imports-are-installed>` — Try to import every module (and submodule) that NEMESIS uses in NEMESIS\_pipeline\_new\_temp\_2.py. Prints a compact report and returns (missing, imported) where each is a list of module strings.
 - :ref:`check_transit_symmetry <api-nemesis-tess-pipeline-check-transit-symmetry>` — Assess left/right transit symmetry using uncertainty-normalised (SNR-on-the-asymmetry) tests for both transit depth and fractional transit duration (q\_tran).
-- :ref:`check_transit_symmetry_OLD <api-nemesis-tess-pipeline-check-transit-symmetry-old>` — Checks the symmetry of the transit by comparing the left and right mirrored transit depths and durations. Returns a pass/fail result based on predefined thresholds.
 - :ref:`check_wcs <api-nemesis-tess-pipeline-check-wcs>` — Returns an astropy.wcs.WCS for the input TESS FFI/TPF.
 - :ref:`chi <api-nemesis-tess-pipeline-chi>` — FA check: inconsistent per-transit SNRs (χ² statistic).
 - :ref:`classify_retrieval_error <api-nemesis-tess-pipeline-classify-retrieval-error>` — Sort a cutout-retrieval exception into a plain-language cause.
@@ -167,7 +164,6 @@ L
 - :ref:`_ls_results_for_flux <api-nemesis-tess-pipeline-ls-results-for-flux>` — Compute all Lomb-Scargle metrics for a single flux array.
 - :ref:`large <api-nemesis-tess-pipeline-large>` — FP check: planet candidate radius too large (likely an eclipsing binary).
 - :ref:`LC_creation <api-nemesis-tess-pipeline-lc-creation>` **[public]** — Produce processed TESS light curves for one or more sectors using the NEMESIS pipeline (Feliz et al. 2021, https://arxiv.org/abs/2103.05647).
-- :ref:`LC_creation_OLD <api-nemesis-tess-pipeline-lc-creation-old>` — Produce processed TESS light curves for one or more sectors using the NEMESIS pipeline (Feliz et al. 2021, https://arxiv.org/abs/2103.05647).
 - :ref:`LC_to_LS <api-nemesis-tess-pipeline-lc-to-ls>` — Render the LS periodogram and phase-folded LC panels for vetting report page 3.
 - :ref:`lin_interp <api-nemesis-tess-pipeline-lin-interp>` — This function is used to perform a simple linear interpolation.
 - :ref:`load_camera_quaternions <api-nemesis-tess-pipeline-load-camera-quaternions>` — Extract TIME, Q1, Q2, Q3 for a given camera from a quaternion HDUList.
@@ -179,7 +175,6 @@ M
 
 - :ref:`Make_dirs <api-nemesis-tess-pipeline-make-dirs>` — Create all NEMESIS output directories and write resolved path strings back into ''default\_settings''.
 - :ref:`mann2019_mass_radius <api-nemesis-tess-pipeline-mann2019-mass-radius>` — Estimate M-dwarf stellar mass and radius from absolute 2MASS K\_s magnitude.
-- :ref:`mann2019_mass_radius_OLD <api-nemesis-tess-pipeline-mann2019-mass-radius-old>` — Estimate M-dwarf stellar mass and radius from absolute K-band magnitude using the empirical polynomial relations of Mann et al. 2019 (mass) and Mann et al. 2015 (radius).
 - :ref:`mask_out_neighbor_pixels <api-nemesis-tess-pipeline-mask-out-neighbor-pixels>` — Excise aperture pixels contaminated by neighboring stars.
 - :ref:`mask_out_neighbor_pixels_OLD <api-nemesis-tess-pipeline-mask-out-neighbor-pixels-old>` — Excise aperture pixels contaminated by neighboring stars, with a separation-based gate that escalates sub-pixel blends to PRF decontamination rather than attempting pixel excision.
 - :ref:`mass_radius_mdwarf_relation <api-nemesis-tess-pipeline-mass-radius-mdwarf-relation>` — Adjusts the mass and radius of an M-dwarf star based on the given inputs. This function uses an OVERLY simple linear mass-radius relationship for M-dwarfs, where if one of the stellar parameters (mass or radius) is…
@@ -220,15 +215,11 @@ P
 - :ref:`PLD_model <api-nemesis-tess-pipeline-pld-model>` — Two-pass Pixel Level Decorrelation (PLD) with GP-proxy variance inflation.
 - :ref:`plot_centroids_in_phase <api-nemesis-tess-pipeline-plot-centroids-in-phase>` — See source for parameters and behavior.
 - :ref:`plot_cutouts_ALT <api-nemesis-tess-pipeline-plot-cutouts-alt>` — Drop-in alternative to ''plot\_cutouts'' with a ''catalog\_source'' switch.
-- :ref:`plot_cutouts_ALTb <api-nemesis-tess-pipeline-plot-cutouts-altb>` — Drop-in alternative to ''plot\_cutouts'' with a ''catalog\_source'' switch.
-- :ref:`plot_cutouts_OLD <api-nemesis-tess-pipeline-plot-cutouts-old>` — This function will plot the median flux image of the input Full Frame Image or Target Pixel File (FFI/TPF) along with the input photometric aperture and background flux pixel masks.
 - :ref:`plot_dss_orientation <api-nemesis-tess-pipeline-plot-dss-orientation>` — Fetch a DSS optical stamp, reproject it onto the TESS WCS pixel grid, and render it with N/E arrows and TESS aperture/background mask overlays.
-- :ref:`plot_dss_orientation_OLD <api-nemesis-tess-pipeline-plot-dss-orientation-old>` — Fetch DSS and draw N/E. If anything fails (DNS/HTTP/WCS/FITS), place 'No DSS image' text and return cleanly. Uses the SAME cache root as TESScut/TPF (downloadpath).
 - :ref:`plot_dss_sources <api-nemesis-tess-pipeline-plot-dss-sources>` — Overlay catalog sources on the reprojected DSS panel.
 - :ref:`plot_image <api-nemesis-tess-pipeline-plot-image>` — See source for parameters and behavior.
 - :ref:`plot_image_ALT <api-nemesis-tess-pipeline-plot-image-alt>` — Plot the TESS FFI/TPF median-image cutout with aperture/background masks and catalog source overlay (TIC or Gaia DR3).
 - :ref:`plot_image_and_mask <api-nemesis-tess-pipeline-plot-image-and-mask>` — This function will plot the Full Frame Image or Target Pixel File (FFI/TPF) images and input aperture and background pixel masks.
-- :ref:`plot_image_and_mask_OLD <api-nemesis-tess-pipeline-plot-image-and-mask-old>` — This function will plot the Full Frame Image or Target Pixel File (FFI/TPF) images and input aperture and background pixel masks.
 - :ref:`plot_it_all_up <api-nemesis-tess-pipeline-plot-it-all-up>` — Unified LC summary figure for both single-sector and multi-sector runs.
 - :ref:`plot_LEO_Vetter_text_results <api-nemesis-tess-pipeline-plot-leo-vetter-text-results>` — No description available in the source docstring.
 - :ref:`plot_mask <api-nemesis-tess-pipeline-plot-mask>` — This function is used to plot a pixel mask on a subplot.
@@ -276,8 +267,6 @@ S
 - :ref:`_select_transit_indices <api-nemesis-tess-pipeline-select-transit-indices>` — Return (selected\_indices, tier\_labels) for stratified SNR-ranked selection.
 - :ref:`safe_cleanup_cache <api-nemesis-tess-pipeline-safe-cleanup-cache>` — Best-effort cleanup of files under the ONE cache root indicated by default\_settings. Mirrors your old behavior but without hardcoded /mnt/... paths. When ''shard\_cache\_by\_tic'' is enabled and ''tic\_id'' is provided…
 - :ref:`safe_panel_normalization <api-nemesis-tess-pipeline-safe-panel-normalization>` — Normalize a per-panel flux/error pair by a guaranteed-positive scale.
-- :ref:`safe_skyview_stamp_OLD <api-nemesis-tess-pipeline-safe-skyview-stamp-old>` — Wrapper around astrobase.plotbase.skyview\_stamp that ALWAYS returns (stamp, hdr) and NEVER raises. On any failure, returns (None, None).
-- :ref:`SAP <api-nemesis-tess-pipeline-sap>` — Simple Aperture Photometry with simultaneous, flux-independent quality flagging.
 - :ref:`SAP_ALT5 <api-nemesis-tess-pipeline-sap-alt5>` — Simple Aperture Photometry with fully coupled aperture evaluation.
 - :ref:`SAP_and_BKG_uncertainty <api-nemesis-tess-pipeline-sap-and-bkg-uncertainty>` — Propagate photon and readout noise into SAP and background flux uncertainties.
 - :ref:`saveNDarr <api-nemesis-tess-pipeline-savendarr>` — Serialize an arbitrary Python object to a pickle (.pkl) file.
@@ -289,7 +278,6 @@ S
 - :ref:`singleoutliers <api-nemesis-tess-pipeline-singleoutliers>` — This function will search input data for points that are not consecutive.
 - :ref:`sinusoidal <api-nemesis-tess-pipeline-sinusoidal>` — FA check: signal consistent with sinusoidal variability.
 - :ref:`Smoother <api-nemesis-tess-pipeline-smoother>` — Smooth the PLD-corrected light curve with a biweight running window.
-- :ref:`Smoother_OLD <api-nemesis-tess-pipeline-smoother-old>` — Smooth the PLD-corrected light curve with a biweight running window.
 - :ref:`symmetry_window_is_degenerate <api-nemesis-tess-pipeline-symmetry-window-is-degenerate>` — Decide whether the left/right mirror symmetry test can run at all.
 
 T
@@ -310,7 +298,6 @@ T
 - :ref:`timer <api-nemesis-tess-pipeline-timer>` — Print the wall-clock runtime of a pipeline step in human-readable units.
 - :ref:`TLS_func <api-nemesis-tess-pipeline-tls-func>` — This function will perform a transit search on the input light curve using the Transit Least Squares (TLS, Hippke & Heller et al. 2019, https://arxiv.org/pdf/1901.02015.pdf) algorithm. Run the Transit Least Squares…
 - :ref:`transit_injection <api-nemesis-tess-pipeline-transit-injection>` — Inject a limb-darkened transit into a TESS-like light curve using BATMAN.
-- :ref:`transit_injection_OLD <api-nemesis-tess-pipeline-transit-injection-old>` — Injects a limb-darkened transit into a TESS-like light curve using the BATMAN package.
 - :ref:`Transit_Pipeline <api-nemesis-tess-pipeline-transit-pipeline>` **[public]** — Run BLS and optionally TLS transit searches, produce transit plots, and generate multi-page vetting reports.
 - :ref:`Transit_plot <api-nemesis-tess-pipeline-transit-plot>` — Save a 2×2 transit search summary figure for the best-fit BLS or TLS signal.
 - :ref:`TransitSearch <api-nemesis-tess-pipeline-transitsearch>` — Dispatcher that runs either BLS or TLS on the input light curve.
@@ -334,7 +321,6 @@ V
 - :ref:`Vetting_Report_3rd_page <api-nemesis-tess-pipeline-vetting-report-3rd-page>` — Produce page 3 of the NEMESIS vetting report: LS periodogram and phase-folded light curves.
 - :ref:`Vetting_Report_4th_page <api-nemesis-tess-pipeline-vetting-report-4th-page>` — Produce page 4 of the NEMESIS vetting report: centroid analysis and transit symmetry tests.
 - :ref:`Vetting_Report_5th_page_plot_individual_transits <api-nemesis-tess-pipeline-vetting-report-5th-page-plot-individual-transits>` — Produce page 5 of the NEMESIS vetting report: individual transit zoom-ins.
-- :ref:`Vetting_Report_5th_page_plot_individual_transits_OLD <api-nemesis-tess-pipeline-vetting-report-5th-page-plot-individual-transits-old>` — Produce page 5 of the NEMESIS vetting report: individual transit zoom-ins.
 - :ref:`Vetting_Report_6th_page_LEOVetter <api-nemesis-tess-pipeline-vetting-report-6th-page-leovetter>` — Produce page 6 of the NEMESIS vetting report: LEO-Vetter modshift analysis.
 - :ref:`Vetting_Report_multi_page <api-nemesis-tess-pipeline-vetting-report-multi-page>` — Produce pages 2–6 of the NEMESIS vetting report and merge all pages into a single multi-page PDF.
 - :ref:`vshaped <api-nemesis-tess-pipeline-vshaped>` — FP check: V-shaped transit event (consistent with a grazing eclipsing binary).

@@ -1,10 +1,11 @@
-__version__ = "1.96"
-__date_modified__="Last Updated October 26th, 2026"
+__version__ = "2.0"
+__date_modified__="Last Updated November 14th, 2026"
 __version_message__ = f"NEMESIS version: {__version__} ; {__date_modified__}"
 #
 ########## REQUIRED DEPENDENCIES FOR PIPELINE ########### 
 #
-def patch_EDIVetter_Unplugged(): #UNUSED, EDI-Vetter is no longer supported
+# probably deprecated/incompatible with current NEMESIS
+def patch_EDIVetter_Unplugged(): #UNUSED (keeping for legacy purposes, in case I want to use EDIVetter)
     """
     Patch the EDIunplugged package by replacing deprecated 'np.float' with 'float' 
     in Python scripts. This patch is only applied if the installed version of 
@@ -119,6 +120,7 @@ def check_imports_are_installed(verbose=True):
         "leo_vetter",          # custom vetter module (external/non-pip in many setups)
         #"EDIunplugged",        # EDI vetter (no longer used)
         "lksearch",            # local helper module 
+        "tess_stars2px",        #TESS-POINT's import name
 
         # --- stdlib that appear in imports (always present in Python, but we verify anyway) ---
         "itertools",
@@ -159,6 +161,7 @@ def check_imports_are_installed(verbose=True):
                 "leo_vetter": "Install/put on PYTHONPATH (project-local module)",
                 "lksearch": "Install/put on PYTHONPATH (project-local module)",
                 "EDIunplugged": "pip install EDIunplugged",
+                "tess_stars2px": "python -m pip install tess-point",
             }
             print("\nInstall hints:")
             for key, hint in hints.items():
@@ -4708,6 +4711,12 @@ def gethdu(star, ID, Sector, cadence, default_settings):
                                                        hdu[1].data['QUALITY'],
                                                        verbose))
             
+#         except Exception as err:
+#             if verbose:
+#                 print(f"Sector {_sec_str(sec)}: download failed ({err})")
+        except (ModuleNotFoundError, ImportError):
+            raise
+
         except Exception as err:
             if verbose:
                 print(f"Sector {_sec_str(sec)}: download failed ({err})")
@@ -7863,582 +7872,8 @@ def apply_nan_to_flagged_rows(
         if col not in preserve:
             out.loc[bad, col] = np.nan
     return out
-
 #
 #
-#
-def SAP(ID, nearby_star_catalog, Sector, cadence,
-        hdu, quality_mask, reference_pixel, default_settings):
-    """
-    Simple Aperture Photometry with simultaneous, flux-independent quality flagging.
-
-    This implementation replaces the original SAP + preclean_SAP_BKG_Centroids
-    two-step approach with a unified function that produces an integer QUALITY_FLAG
-    column alongside the normalized flux.  The flag encoding is:
-
-        0  good cadence
-        1  quaternion-jitter (high pointing scatter; detected without using flux)
-        2  background spike or centroid excursion
-        3  reserved — set downstream by _apply_outlier_flag() / outlier_removal()
-
-    Flag priority (highest wins): 1 > 2.
-
-    Backward-compatible return signature
-    -------------------------------------
-    The function now returns 13 values.  The 7th value is `quality_flag`
-    (int8 ndarray), which replaces the old boolean `bkg_err_mask`.
-    At the call site (get_LC_from_FFI) derive the boolean mask with:
-
-        bkg_err_mask = (quality_flag == 0)
-
-    Quaternion masking philosophy
-    -----------------------------
-    Only the jitter scalar sqrt(σ_Q1² + σ_Q2² + σ_Q3²) is used for FLAG=1.
-    The full 36 QLP feature series are computed by bin_quaternion_features and
-    stored in qlp_result['feature_df'] for diagnostic heatmaps, but they do NOT
-    enter the masking logic (no linear fit is performed inside SAP).
-
-    Parameters
-    ----------
-    ID                 : int
-    nearby_star_catalog: pd.DataFrame
-    Sector             : int
-    cadence            : str   '30 minute' | '10 minute' | '2 minute' | '20 second'
-                               (or legacy aliases 'long', 'short', 'fast')
-    hdu                : fits.HDUList
-    quality_mask       : np.ndarray[bool]  True = bad cadence (bitmask-derived)
-    reference_pixel    : list [x, y]
-    default_settings   : dict
-        Standard NEMESIS keys plus optional overrides:
-            'use_quat_jitter_mask'     : bool   (default True)
-            'quat_savepath'            : str | None
-            'quat_threshold_sigma'     : float  (default 5.0)
-            'quat_min_samples'         : int | None  (default: 25 % of cadence in 2-s samples)
-            'bkg_threshold_sigma'      : float  (default 5.0)
-            'centroid_threshold_sigma' : float  (default 5.0)
-            'bkg_detrend_window'       : float  (default 3/24 days)
-
-    Returns  (13 values)
-    --------------------
-    [0]  bkg_mask              np.ndarray[bool]  shape (ny, nx)
-    [1]  pix_mask              np.ndarray[bool]  shape (ny, nx)
-    [2]  flux                  np.ndarray        shape (T, ny, nx) — quality-masked frames
-    [3]  median_image          np.ndarray        shape (ny, nx)
-    [4]  SAP_LC                pd.DataFrame      full-length; columns include QUALITY_FLAG,
-                                                  Centroid X/Y Positions
-    [5]  flux_contamination_ratio  float
-    [6]  quality_flag          np.ndarray[int8]  shape (T,)
-    [7]  bkg_level_per_pix     np.ndarray        shape (T,)  raw bkg e⁻/s/pix
-    [8]  bkg_trend             np.ndarray        shape (T,)  biweight trend of bkg
-    [9]  bkg_residuals         np.ndarray        shape (T,)  bkg − bkg_trend
-    [10] quat_jitter           np.ndarray | None  pre-normalization jitter scalar
-    [11] quat_status           str               human-readable status
-    [12] qlp_result            dict | None       for plot_SAP_ALT4_diagnostics heatmap
-
-    On any unrecoverable failure all 13 values are None.
-    """
-    import warnings
-    import numpy as np
-    import pandas as pd
-    from pathlib import Path
-    import time as clock
-
-    start = clock.time()
-
-    # ── failure sentinel ──────────────────────────────────────────────────────
-    _FAIL = (None,) * 13
-
-    # =========================================================================
-    # 0.  Unpack settings
-    # =========================================================================
-    cutoutsize              = default_settings.get('cutoutsize')
-    threshold               = default_settings.get('threshold')
-    verbose                 = default_settings.get('verbose')
-    savelcpath              = default_settings.get('savelcpath')
-    use_SPOC_aperture       = default_settings.get('use_SPOC_aperture')
-    use_centroid            = default_settings.get('use_centroid')
-    use_circ                = default_settings.get('use_circ')
-    use_sources_in_aperture = default_settings.get('use_sources_in_aperture')
-    do_aperture_optimization = default_settings.get('do_aperture_optimization')
-    for_injections          = default_settings.get('for_injections')
-    get_all_sectors         = default_settings.get('get_all_sectors')
-    inject_param_P_RP_T0    = default_settings.get('inject_param_P_RP_T0')
-
-    use_quat           = default_settings.get('use_quat_jitter_mask', True)
-    quat_path          = default_settings.get('quat_savepath', None)
-    quat_sigma         = float(default_settings.get('quat_threshold_sigma', 5.0))
-    quat_min_samp      = default_settings.get('quat_min_samples', None)
-    bkg_sigma          = float(default_settings.get('bkg_threshold_sigma', 5.0))
-    cent_sigma         = float(default_settings.get('centroid_threshold_sigma', 5.0))
-    bkg_detrend_window = float(default_settings.get('bkg_detrend_window', 3 / 24))
-
-    if quat_path is None:
-        dl        = default_settings.get('downloadpath', '.')
-        quat_path = str(Path(dl).parent / 'quaternions') + '/'
-
-#     sector_tag = (
-#         "Multi_Sector"
-#         if (get_all_sectors or Sector is None or not isinstance(Sector, int))
-#         else f"Sector_{Sector:04d}"
-#     )
-    
-    
-    sector_tag = f"Sector_{Sector:04d}" if isinstance(Sector, int) else "Multi_Sector"
-
-
-    # =========================================================================
-    # 1.  Metadata and raw image cube
-    # =========================================================================
-    mean_gain, mean_read_noise = get_gain_and_readout_from_hdu(hdu)
-    if verbose:
-        print(f'  gain={np.round(mean_gain, 4)}  '
-              f'read_noise={np.round(mean_read_noise, 4)}')
-
-    median_image = np.nanmedian(hdu[1].data['FLUX'][~quality_mask], axis=0)
-    flux         = hdu[1].data['FLUX'][~quality_mask].astype(np.float64)
-    rawtime      = hdu[1].data['TIME'][~quality_mask].astype(np.float64)
-
-    # Drop fully-NaN frames
-    finite_frames = np.any(np.isfinite(flux), axis=(1, 2))
-    rawtime = np.ascontiguousarray(rawtime[finite_frames])
-    flux    = np.ascontiguousarray(flux[finite_frames])
-
-    if len(rawtime) < 10:
-        if verbose:
-            print('  Too few finite frames after quality masking; returning None.')
-        return _FAIL
-
-    N = len(rawtime)
-
-    # =========================================================================
-    # 2.  Aperture and background pixel masks
-    # =========================================================================
-    pix_mask = None
-    
-    bkg_mask = ~thresholdmask(
-        hdu, reference_pixel=None, threshold=1 / 1000,
-        use_centroid=use_centroid, use_circ=use_circ,
-    )
-
-    if (reference_pixel[0] > cutoutsize) or (reference_pixel[1] > cutoutsize):
-        if verbose:
-            print('  reference_pixel exceeds cutout size; centering.')
-        reference_pixel = [cutoutsize / 2, cutoutsize / 2]
-        
-    if do_aperture_optimization:
-        best_mask, best_score, scores = try_apertures(
-            hdu, reference_pixel, quality_mask, 
-            nearby_star_catalog, ID,
-            rawtime, default_settings,
-            thresholds=(3.0, 5.0, 7.5, 10.0),
-            radii=(1.0, 1.5, 2.0, 2.5),   # pixels, circular only
-        )
-        if best_mask is None or best_mask.sum() < 2:
-            pix_mask = None
-        else:
-            pix_mask = best_mask
-        
-    if (do_aperture_optimization==False) or (pix_mask is None):        
-        for factor in [1.0, 0.5, 1 / 3, 1 / threshold]:
-            try:
-                pix_mask = thresholdmask(
-                    hdu, reference_pixel,
-                    threshold=threshold * factor,
-                    use_centroid=use_centroid, use_circ=use_circ,
-                )
-                if verbose:
-                    print(f'  threshold={threshold * factor:.4f} accepted')
-                break
-            except ValueError:
-                continue
-
-        if pix_mask is None:
-            if verbose:
-                print('  thresholdmask failed for all thresholds; returning None.')
-            return _FAIL
-
-        if cadence in ('short', '2 minute', '20 second', 'fast') and use_SPOC_aperture:
-            try:
-                pipeline_mask = hdu[2].data & 2 > 0
-                pix_mask      = pipeline_mask
-                bkg_mask      = ~pipeline_mask
-                if verbose:
-                    print('  using SPOC pipeline aperture')
-            except TypeError:
-                pix_mask = np.ones(hdu[2].data.shape, dtype=bool)
-                bkg_mask = ~pix_mask
-
-    # =========================================================================
-    # 3.  Per-frame background extraction and raw SAP flux
-    # =========================================================================
-    (rawflux, bkgFlux, rawsap_flux,
-     Npixaper, Npixbkg, bkg_level_per_pix) = extract_background_flux(
-        flux, bkg_mask, pix_mask, Nsig=3.0
-    )
-
-    # =========================================================================
-    # 4.  Per-cadence centroids (inline; avoids separate disk read)
-    # =========================================================================
-    centx = np.full(N, np.nan)
-    centy = np.full(N, np.nan)
-    for t in range(N):
-        try:
-            cx, cy = centroid_quadratic(flux[t], pix_mask, reference_pixel)
-            centx[t] = float(cx)
-            centy[t] = float(cy)
-        except Exception:
-            pass
-
-    # =========================================================================
-    # 5.  Flux uncertainty
-    # =========================================================================
-    sap_flux_error, bkg_flux_error = SAP_and_BKG_uncertainty(
-        rawflux    = rawsap_flux,
-        bkgFlux    = bkgFlux,
-        pix_mask   = pix_mask,
-        bkg_mask   = bkg_mask,
-        rawtime    = rawtime,
-        gain       = mean_gain,
-        read_noise = mean_read_noise,
-    )
-
-    # =========================================================================
-    # 6.  Transit injection (optional)
-    # =========================================================================
-    if for_injections and inject_param_P_RP_T0 is not None:
-        Period, R_planet_RE, T0 = inject_param_P_RP_T0
-        _rawsap_preinjection = rawsap_flux.copy()
-
-        RawSAP_LC_inj = pd.DataFrame({
-            'Time': rawtime,
-            'SAP Flux': rawsap_flux,
-            'SAP Error': sap_flux_error,
-        })
-        orbit1_start, orbit1_stop, orbit2_start, orbit2_stop = \
-            TESS_Sector_observation_check(SectorNum=Sector)
-        if T0 is None:
-            T0 = orbit1_start
-            inject_param_P_RP_T0 = [Period, R_planet_RE, T0]
-            default_settings['inject_param_P_RP_T0'] = inject_param_P_RP_T0
-
-        inj_LC, inj_params = transit_injection(
-            input_LC            = RawSAP_LC_inj,
-            Period              = Period,
-            T0                  = T0,
-            ID                  = ID,
-            nearby_star_catalog = nearby_star_catalog,
-            Sector              = Sector,
-            default_settings    = default_settings,
-            R_planet_RE         = R_planet_RE,
-        )
-        inj_params.to_csv(
-            savelcpath + f'TIC_{ID}_{sector_tag}_TransitInjected_param.csv',
-            index=False,
-        )
-        _denom         = np.maximum(np.abs(_rawsap_preinjection), 1.0)
-        _scale         = np.sqrt(
-            np.maximum(np.abs(inj_LC['SAP Flux'].to_numpy()), 0.0) / _denom
-        )
-        rawsap_flux    = inj_LC['SAP Flux'].to_numpy()
-        sap_flux_error = sap_flux_error * _scale
-        inj_LC['SAP Error'] = sap_flux_error
-        inj_LC['BKG Flux']  = bkgFlux
-        inj_LC['BKG Error'] = bkg_flux_error
-        inj_LC.to_csv(
-            savelcpath + f'TIC_{ID}_{sector_tag}_TransitInjected_RAWLC.csv',
-            index=False,
-        )
-        if verbose:
-            print(f'  Transit injection: P={Period} d  Rp={R_planet_RE} RE  T0={T0}')
-
-    # =========================================================================
-    # 7.  Flux contamination / deblending
-    # =========================================================================
-    def _safe_contamination(catalog, use_aperture):
-        try:
-            if use_aperture:
-                cat_in = get_sources_in_aperture_mask(
-                    ID, hdu, pix_mask, catalog, verbose=False
-                )
-                if len(cat_in) < 1:
-                    raise ValueError('empty aperture catalog')
-                ratio, sigma = calc_flux_contamination(
-                    nearby_star_catalog=cat_in, ID=ID
-                )
-            else:
-                ratio, sigma = calc_flux_contamination(
-                    nearby_star_catalog=catalog, ID=ID, N_TESS_pixels=3
-                )
-            if not np.isfinite(ratio):
-                raise ValueError('non-finite contamination ratio')
-            return float(ratio), float(sigma)
-        except Exception as exc:
-            if verbose:
-                print(f'  contamination fallback ({exc})')
-            try:
-                ratio, sigma = calc_flux_contamination(
-                    nearby_star_catalog=catalog, ID=ID, N_TESS_pixels=3
-                )
-                return float(ratio), float(sigma)
-            except Exception:
-                return 0.0, 0.0
-
-    flux_contamination_ratio, sigma_contamination = _safe_contamination(
-        nearby_star_catalog, use_sources_in_aperture
-    )
-    if verbose:
-        print(f'  contamination={flux_contamination_ratio:.4f} '
-              f'± {sigma_contamination:.4f}')
-
-    # =========================================================================
-    # 8.  Simultaneous quality indicators
-    # =========================================================================
-    from wotan import flatten as _wotan_flatten
-
-    def _mad_flag(arr, nsigma, side='both'):
-        """True = GOOD cadence (MAD-based threshold)."""
-        finite = np.isfinite(arr)
-        if finite.sum() < 5:
-            return np.ones(len(arr), dtype=bool)
-        med = np.nanmedian(arr[finite])
-        mad = np.nanmedian(np.abs(arr[finite] - med)) * 1.4826
-        if mad == 0 or not np.isfinite(mad):
-            return finite.copy()
-        lo, hi = med - nsigma * mad, med + nsigma * mad
-        if   side == 'both':  return finite & (arr >= lo) & (arr <= hi)
-        elif side == 'upper': return finite & (arr <= hi)
-        elif side == 'lower': return finite & (arr >= lo)
-        return finite & (arr >= lo) & (arr <= hi)
-
-    # 8a. Background (biweight-detrended residuals)
-    try:
-        _, bkg_trend = _wotan_flatten(
-            rawtime, bkg_level_per_pix,
-            window_length=bkg_detrend_window,
-            return_trend=True, method='biweight', break_tolerance=0.5,
-        )
-        bkg_residuals = bkg_level_per_pix - bkg_trend
-    except Exception as _bkg_exc:
-        warnings.warn(
-            f'[SAP] Background biweight detrending failed ({_bkg_exc}); '
-            'using global MAD threshold on raw background.',
-            RuntimeWarning,
-        )
-        bkg_trend     = np.full(N, np.nanmedian(bkg_level_per_pix))
-        bkg_residuals = bkg_level_per_pix - bkg_trend
-
-    #bkg_good = _mad_flag(arr=bkg_residuals, nsig=bkg_sigma, side='both') #OLD
-    
-    #bkg_good = _mad_flag(arr=bkg_residuals, nsig=bkg_sigma, side='upper') #NEW
-    
-    # Upper-tail MAD flag on residuals.
-    # Fractional floor: only fire if residual also exceeds 5% of the trend
-    # level — prevents flagging near-zero backgrounds where MAD→0.
-    bkg_mad_good  = _mad_flag(arr=bkg_residuals, nsigma=bkg_sigma, side='upper')
-    _safe_trend   = np.where(bkg_trend > 0, bkg_trend, np.nan)
-    bkg_frac_good = (np.abs(bkg_residuals) / _safe_trend) < 0.05
-    bkg_good      = bkg_mad_good | bkg_frac_good    # pass if EITHER criterion is clean
-
-    # 8b. Centroid excursion
-    finite_cent = np.isfinite(centx) & np.isfinite(centy)
-    dx = np.where(finite_cent, centx - np.nanmedian(centx[finite_cent]), np.nan)
-    dy = np.where(finite_cent, centy - np.nanmedian(centy[finite_cent]), np.nan)
-    cent_offset = np.sqrt(dx**2 + dy**2)
-    cent_good   = _mad_flag(arr=cent_offset, nsigma=cent_sigma, side='upper') & finite_cent
-
-    # 8c. Quaternion jitter scalar (flux-independent; see docstring for rationale)
-    quat_good   = np.ones(N, dtype=bool)
-    quat_jitter = None
-    qlp_result  = None
-    quat_status = 'skipped: use_quat_jitter_mask=False'
-
-    if use_quat:
-        quat_status = 'skipped: unknown error'
-        try:
-            camera = int(
-                hdu[0].header.get('CAMERA', hdu[1].header.get('CAMERA', -1))
-            )
-            if camera not in (1, 2, 3, 4):
-                raise ValueError(f'invalid CAMERA header value: {camera}')
-
-            _cad_map = {
-                'long': 30/1440, '30 minute': 30/1440, '10 minute': 10/1440,
-                'short': 2/1440, '2 minute': 2/1440,
-                'fast': 20/86400, '20 second': 20/86400,
-            }
-            cadence_days_q = _cad_map.get(cadence)
-            if cadence_days_q is None:
-                cadence_days_q = float(np.nanmedian(np.diff(rawtime)))
-
-            if quat_min_samp is None:
-                quat_min_samp = max(5, int(0.25 * cadence_days_q * 86400.0 / 2.0))
-
-            # TIMECORR: TJD → BTJD
-            time_offset = 0.0
-            try:
-                if 'TIMECORR' in hdu[1].columns.names:
-                    tc = hdu[1].data['TIMECORR'].astype(np.float64)
-                    finite_tc = tc[np.isfinite(tc)]
-                    if len(finite_tc) > 0:
-                        time_offset = float(np.median(finite_tc))
-            except Exception:
-                pass
-
-            qdata = get_qdata(
-                sector=int(Sector), savepath=quat_path, overwrite=False
-            )
-            try:
-                qdf = load_camera_quaternions(qdata, camera=camera)
-            finally:
-                qdata.close()
-
-            feature_df, feature_cols = bin_quaternion_features(
-                lc_time      = rawtime,
-                q_time       = qdf['TIME'].values,
-                q1           = qdf['Q1'].values,
-                q2           = qdf['Q2'].values,
-                q3           = qdf['Q3'].values,
-                cadence_days = cadence_days_q,
-                min_samples  = quat_min_samp,
-                time_offset  = time_offset,
-            )
-            jitter_arr = feature_df['jitter'].values  # pre-normalization scalar
-
-            finite_j = jitter_arr[np.isfinite(jitter_arr)]
-            if len(finite_j) < 5:
-                raise ValueError(
-                    f'Only {len(finite_j)} finite jitter bins — check time '
-                    'overlap or lower quat_min_samples.'
-                )
-            med_j = np.median(finite_j)
-            mad_j = np.median(np.abs(finite_j - med_j)) * 1.4826
-            jitter_mask = (
-                ~np.isfinite(jitter_arr)
-                | (jitter_arr > med_j + quat_sigma * mad_j)
-            )
-            quat_good   = ~jitter_mask
-            quat_jitter = jitter_arr
-
-            qlp_result = {
-                'mask':              jitter_mask,
-                'jitter_mask':       jitter_mask,
-                'outlier_mask':      np.zeros(N, dtype=bool),
-                'jitter':            jitter_arr,
-                'feature_df':        feature_df,
-                'feature_cols':      feature_cols,
-                'detrended_flux':    None,
-                'best_fit':          None,
-                'bic_values':        {},
-                'best_knot_spacing': None,
-            }
-            n_bad = int(jitter_mask.sum())
-            quat_status = (
-                f'used (jitter-scalar MAD, σ={quat_sigma:.1f}, '
-                f'min_samples={quat_min_samp}, '
-                f'Δt_bary={time_offset * 1440:.2f} min)'
-            )
-            print(
-                f'[SAP quat] S{Sector} | Cam{camera} | '
-                f'cad={cadence_days_q * 1440:.1f} min | '
-                f'masked={n_bad}/{N} ({100 * n_bad / N:.1f}%) | '
-                f'jitter median={med_j:.4e}  MAD={mad_j:.4e}'
-            )
-
-        except FileNotFoundError:
-            quat_status = f'skipped: no quaternion file for Sector {Sector}'
-            warnings.warn(f'[SAP] {quat_status}', RuntimeWarning)
-        except Exception as exc:
-            quat_status = f'skipped: {exc}'
-            warnings.warn(
-                f'[SAP] quaternion mask failed — {exc}. Defaulting to all-good.',
-                RuntimeWarning,
-            )
-
-    if verbose:
-        print(f'  quaternion status: {quat_status}')
-
-    # =========================================================================
-    # 9.  Build quality bitmask
-    # flag-id 1 -> jitter  -> bit 1
-    # flag-id 2 -> bkg/cent -> bit 2
-    # =========================================================================
-    quality_flag = np.zeros(N, dtype=np.int16)
-
-    quality_flag[~quat_good]  |= QUALITY_FLAG_BITS[1] # bit 1
-#     quality_flag[(~bkg_good) | (~cent_good)] |= QUALITY_FLAG_BITS[2]
-    # good = quality_flag == 0
-
-    quality_flag[~bkg_good]   |= QUALITY_FLAG_BITS[2] # bit 2: bkg only
-    quality_flag[~cent_good]  |= QUALITY_FLAG_BITS[3] # bit 4: centroid excursion only
-    # flag-id 4 (outlier, bit 8) is set downstream by _apply_outlier_flag()
-
-     # "good" for normalization/deblending: no flux-corrupting flags
-    good = (quality_flag & int(_FLUX_CORRUPT_MASK)) == 0
-    
-    if verbose:
-        vals, cts = np.unique(quality_flag, return_counts=True)
-        value_hist = {int(v): int(c) for v, c in zip(vals, cts)}
-        n_jitter  = int(((quality_flag & int(QUALITY_FLAG_BITS[1])) != 0).sum())
-        n_bkg     = int(((quality_flag & int(QUALITY_FLAG_BITS[2])) != 0).sum())
-        n_cent    = int(((quality_flag & int(QUALITY_FLAG_BITS[3])) != 0).sum())
-        n_outlier = int(((quality_flag & int(QUALITY_FLAG_BITS[4])) != 0).sum())
-        print(f'  QUALITY_FLAG bit counts: '
-              f'clean={good.sum()} | '
-              f'1=jitter {n_jitter} | '
-              f'2=bkg {n_bkg} | '
-              f'3=centroid {n_cent} | '
-              f'4=outlier {n_outlier}')
-        print(f'  QUALITY_FLAG stored values: {value_hist}')
-
-    # =========================================================================
-    # 10.  Normalize and deblend (uses good cadences to set scale; applied to all)
-    # =========================================================================
-    med1           = np.nanmedian(rawsap_flux[good])
-    sap_flux       = rawsap_flux / med1
-    error          = sap_flux_error / med1
-    sigma_c_norm   = sigma_contamination / med1
-    error          = np.sqrt(error**2 + sigma_c_norm**2)
-    sap_flux       = sap_flux - flux_contamination_ratio
-    med2           = np.nanmedian(sap_flux[good])
-    sap_flux       = sap_flux / med2
-    error          = error    / med2
-
-    # =========================================================================
-    # 11.  Full-length output DataFrame
-    # =========================================================================
-    SAP_LC = pd.DataFrame({
-        'CADENCE_INDEX':        np.arange(len(rawtime), dtype=int),
-        'Time':                 rawtime,
-        'RAW SAP Flux':         rawsap_flux,
-        'SAP Flux':             sap_flux,
-        'SAP Error':            error,
-        'Background Flux':      bkgFlux,
-        'Background Error':     bkg_flux_error,
-        'Centroid X Positions': centx,
-        'Centroid Y Positions': centy,
-        'QUALITY_FLAG':         quality_flag,
-    })
-    SAP_LC = _decorate_quality_columns(SAP_LC)
-
-    if verbose:
-        df_len_check(SAP_LC, message='SAP output: ')
-        timer(start, clock.time(), 'SAP() total:')
-
-    return (
-        bkg_mask,
-        pix_mask,
-        flux,
-        median_image,
-        SAP_LC,
-        flux_contamination_ratio,
-        quality_flag,        # [6]  int8 ndarray — was bkg_err_mask (bool)
-        bkg_level_per_pix,   # [7]
-        bkg_trend,           # [8]
-        bkg_residuals,       # [9]
-        quat_jitter,         # [10]
-        quat_status,         # [11]
-        qlp_result,          # [12]
-    )
 #
 # Modified SAP to allow PRF usage instead of just threshold-based masking
 from astropy.wcs import WCS
@@ -8467,20 +7902,6 @@ _FLUX_CORRUPT_MASK: np.int16 = np.int16(
 ) 
 
 _ALL_FLAG_IDS = frozenset(QUALITY_FLAG_BITS.keys())  # {0,1,2,3,4}
-
-# ── New keys to add to default_NEMESIS_pipeline_settings() ───────────────────
-#
-#   'aperture_auto_select'        : False,  # auto-switch to PRF when warranted
-#   'aperture_auto_contam_thresh' : 0.05,   # switch if contamination ratio > 5%
-#   'aperture_auto_tmag_thresh'   : 13.0,   # switch if Tmag > this value
-#   'aperture_selection_method'   : 'threshold',
-#   'prf_weight_threshold'        : 0.01,
-#   'prf_decontaminate'           : True,
-#   'prf_cache_dir'               : None,
-#   'prf_jitter_sigma'            : 0.0,
-#   'use_prf_pos_corr'            : False,
-#   'use_centroid_prf'            : False,
-
 
 import numpy as np
 import pandas as pd
@@ -9964,9 +9385,9 @@ def SAP_ALT5(
     # =========================================================================
     if verbose:
         print('\n  ===== Phase A: Candidate Generation =====')
-
+    #
     candidates = {}   # label -> raw_mask (pre-excision)
-
+    #
     if do_aperture_optimization:
         # Threshold sweep
         for sigma in opt_thresholds:
@@ -9977,14 +9398,14 @@ def SAP_ALT5(
                     candidates[f'thr_{sigma:.1f}σ'] = pm
             except Exception:
                 pass
-
+        #
         # Circular sweep
         for rad in opt_radii:
             #pm = _circ_mask(rad)
             pm = create_circular_mask(median_image, reference_pixel, radius=rad, snap_to_pixel=True)
             if pm.sum() >= min_aperture_pixels:
                 candidates[f'circ_{rad}px'] = pm
-
+        #
         # PRF binary (opt-in)
         if use_prf_in_optimization:
             try:
@@ -10004,31 +9425,7 @@ def SAP_ALT5(
             except Exception as exc:
                 if verbose:
                     print(f'  [ALT5 A] PRF candidate failed ({exc}); skipped.')
-
-#     else:
-#         # Single-method path
-#         if aperture_method == 'prf':
-#             try:
-#                 _tmag_s = float(nearby_star_catalog.loc[
-#                     nearby_star_catalog['ID'].astype(str) == str(ID), 'Tmag'].iloc[0])
-#                 _, pm_prf_s = compute_prf_aperture_weights(
-#                     hdu=hdu, reference_pixel=reference_pixel,
-#                     nearby_star_catalog=nearby_star_catalog, target_tmag=_tmag_s,
-#                     cutoutsize=cutoutsize, prf_weight_threshold=prf_weight_threshold,
-#                     decontaminate=True, prf_cache_dir=prf_cache_dir, verbose=verbose,
-#                 )
-#                 pm_prf_s = pm_prf_s & ~bkg_mask
-#                 if pm_prf_s.sum() >= min_aperture_pixels:
-#                     candidates['prf_binary'] = pm_prf_s
-#             except Exception as exc:
-#                 if verbose:
-#                     print(f'  [ALT5 A] PRF failed ({exc}); falling through to threshold.')
-
-#         elif aperture_method == 'circular':
-#             pm_c = _circ_mask(circular_aperture_radius)
-#             if pm_c.sum() >= min_aperture_pixels:
-#                 candidates['circular_fixed'] = pm_c
-
+        #
     else:
         # Single-method path.
         # `aperture_method_param` is written by the LC_creation locking logic
@@ -10066,8 +9463,6 @@ def SAP_ALT5(
         elif aperture_method == 'threshold':
             _sigma = float(_locked_param) if _locked_param is not None else threshold
             try:
-#                 pm_t = thresholdmask(hdu, reference_pixel, threshold=_sigma,
-#                                      use_centroid=use_centroid, use_circ=use_circ)
                 pm_t = thresholdmask(
                     hdu, reference_pixel, threshold=_sigma,
                     use_centroid=use_centroid, use_circ=use_circ,
@@ -10333,13 +9728,6 @@ def SAP_ALT5(
             inject_param_P_RP_T0 = [Period, R_planet_RE, T0]
             default_settings['inject_param_P_RP_T0'] = inject_param_P_RP_T0
         #
-        #OLD
-#         inj_LC, inj_params = transit_injection(
-#             input_LC=RawSAP_LC_inj, Period=Period, T0=T0, ID=ID,
-#             nearby_star_catalog=nearby_star_catalog, Sector=Sector,
-#             default_settings=default_settings, R_planet_RE=R_planet_RE,
-#         )
-        #
         inj_LC, inj_params = transit_injection(
             input_LC                 = RawSAP_LC_inj,
             Period                   = Period,
@@ -10349,9 +9737,9 @@ def SAP_ALT5(
             Sector                   = Sector,
             default_settings         = default_settings,
             R_planet_RE              = R_planet_RE,
-            flux_contamination_ratio = flux_contamination_ratio,   # <-- NEW
+            flux_contamination_ratio = flux_contamination_ratio,   
         )
-        
+        #
         inj_params.to_csv(
             savelcpath + f'TIC_{ID}_{sector_tag}_TransitInjected_param.csv', index=False)
         #
@@ -10565,27 +9953,7 @@ def SAP_ALT5(
         bkg_level_per_pix, bkg_trend, bkg_residuals,
         quat_jitter, quat_status, qlp_result,
     )
-
-
-# =============================================================================
-# Additions to default_NEMESIS_pipeline_settings()
-# =============================================================================
-# Phase A / B
-#   'use_prf_in_optimization'    : False,
-#   'opt_thresholds'             : (3.0, 5.0, 7.5, 10.0),
-#   'opt_radii'                  : (1.0, 1.5, 2.0, 2.5),
-#   'aperture_method'            : 'threshold',
-#   'circular_aperture_radius'   : 1.5,
-#   'neighbor_catalog_source'    : 'tic',
-#   'neighbor_excision_dtmag'    : 5.0,
-#   'neighbor_excision_radius'   : 1.5,
-#   'neighbor_blend_threshold_px': 2.0,
-#   'neighbor_excision_min_pix'  : 2,
-#   'circular_fallback_radii'    : (1.0, 1.5, 2.0),
-# Phase C
-#   'use_prf_weights'            : False,
-#   'prf_cache_dir'              : None,
-#   'prf_weight_threshold'       : 0.01,
+#
 #
 #
 # stolen and modified from lightkurve's targetpixelfile.py
@@ -10786,27 +10154,18 @@ def collect_nearby_TIC_params(ID,N_TESS_pixels,verbose=False,downloadpath=None):
 
     import astropy.units as u
     radial_cone = (N_TESS_pixels*21.0 * (u.arcsec/u.pixel)* (1 * u.pixel)).to(u.degree).value
-#     result = while_loop(command = Catalogs.query_object(starName, catalog = "TIC", radius=Angle(cone, "arcsec"))[0] ,\
-#                     message = 'Trying TIC query from MAST again in 2 seconds',\
-#                     wait_time = 1)
     starName='TIC '+str(ID)
-#     def fetch_TIC_params():
-#         return Catalogs.query_object(starName, 
-#                                      radius = radial_cone, 
-#                                      catalog = "TIC").to_pandas()    
     result = while_loop( lambda: Catalogs.query_object(starName,
                                                        radius=radial_cone,
                                                        catalog="TIC").to_pandas(),
                        message = 'Trying TIC query from MAST again')
-
-
-    result_filtered = result#.loc[result['disposition']!='DUPLICATE'].reset_index(drop=True)
-#     result_filtered = result[~result['disposition'].isin(['ARTIFACT', 'DUPLICATE', 'SPLIT'])].reset_index(drop=True)
+    #
+    result_filtered = result
+    #
     star = result_filtered.loc[result_filtered['ID']==str(ID)].reset_index(drop=True)
     if len(star)<1:
         print('TIC ',ID,'star length:',len(star),'result length:',len(result))
         star = result.loc[result['ID']==str(ID)].reset_index(drop=True)
-#         if type(star['disposition'].item())==str:
         print('TIC '+str(ID)+' has TIC Disposition '+str(star['disposition'].item()))
         star=result.loc[ (result['GAIA']==star['GAIA'].item()) &
                          (result['duplicate_id']==str(ID)) ].reset_index(drop=True)
@@ -10967,166 +10326,6 @@ def mann2019_mass_radius(
 
     return float(mass), float(radius), False
 
-def mann2019_mass_radius_OLD(
-    Kmag: float,
-    dist_pc: float,
-    feh: float = 0.0,
-    use_metallicity: bool = False,
-    fallback_mass: float = 0.4,
-    fallback_radius: float = 0.4,
-    verbose: bool = False,
-) -> Tuple[float, float, bool]:
-    """
-    Estimate M-dwarf stellar mass and radius from absolute K-band magnitude
-    using the empirical polynomial relations of Mann et al. 2019 (mass) and
-    Mann et al. 2015 (radius).
-
-    Mass relation:
-        Mann et al. 2019, ApJ, 871, 63
-        Eq. 4 / Table 1 (polynomial in M_Ks, optional [Fe/H] correction)
-        Valid range: M_Ks ~ 4.0 -- 10.0 (approx. M0--M7)
-
-    Radius relation:
-        Mann et al. 2015, ApJ, 804, 64
-        Eq. 4 / Table 1 (polynomial in M_Ks)
-        Valid range: M_Ks ~ 4.0 -- 10.0
-
-    IMPORTANT — VERIFY BEFORE USE:
-        The polynomial coefficient arrays below are labeled with the exact
-        equation and table numbers from each paper. Cross-check them against
-        the published tables before running this in production. The functional
-        form and valid range are correct; the numerical values must be
-        confirmed from the PDFs.
-
-    Parameters
-    ----------
-    Kmag : float
-        Apparent 2MASS K_s magnitude of the target (TIC column ``Kmag``).
-    dist_pc : float
-        Distance to the target in parsecs (TIC column ``dist``).
-    feh : float, optional
-        Stellar metallicity [Fe/H]. Only used if ``use_metallicity=True``.
-        Default 0.0 (solar).
-    use_metallicity : bool, optional
-        If True, apply the [Fe/H] correction term to the mass estimate
-        (Mann+2019 Eq. 4). Requires a reliable ``feh`` value. Default False.
-    fallback_mass : float, optional
-        Mass in M_sun returned if inputs are invalid or out of range.
-        Default 0.4 M_sun (mid-M-dwarf).
-    fallback_radius : float, optional
-        Radius in R_sun returned if inputs are invalid or out of range.
-        Default 0.4 R_sun (mid-M-dwarf).
-    verbose : bool, optional
-        Print diagnostic messages. Default False.
-
-    Returns
-    -------
-    mass : float
-        Estimated stellar mass in solar masses.
-    radius : float
-        Estimated stellar radius in solar radii.
-    used_fallback : bool
-        True if the fixed fallback was used because inputs were invalid
-        or M_Ks was outside the valid range.
-
-    Notes
-    -----
-    M_Ks is computed as:
-        M_Ks = Kmag - 5 * log10(dist_pc / 10)
-    (i.e., distance modulus from TIC distance, no extinction correction).
-    For targets at < 100 pc extinction is generally negligible in K-band,
-    consistent with the NEMESIS sample selection.
-
-    Uncertainties are not propagated here. For survey grid purposes the
-    dominant uncertainty is the scatter in the empirical relation itself
-    (~3% in mass, ~3% in radius per Mann+2019/2015), which is negligible
-    relative to the effect on the period/duration grid.
-
-    Example
-    -------
-    >>> mass, radius, used_fallback = mann2019_mass_radius(
-    ...     Kmag=8.1, dist_pc=15.0, verbose=True
-    ... )
-    >>> print(f"M={mass:.3f} M_sun, R={radius:.3f} R_sun, fallback={used_fallback}")
-    """
-
-    # ── Validity check on inputs ──────────────────────────────────────────────
-    if not np.isfinite(Kmag) or not np.isfinite(dist_pc) or dist_pc <= 0:
-        if verbose:
-            print(
-                f'  [mann2019] Invalid inputs: Kmag={Kmag}, dist_pc={dist_pc}. '
-                f'Using fallback M={fallback_mass}, R={fallback_radius}.'
-            )
-        return fallback_mass, fallback_radius, True
-
-    # ── Absolute K-band magnitude ─────────────────────────────────────────────
-    M_Ks = Kmag - 5.0 * np.log10(dist_pc / 10.0)
-
-    if verbose:
-        print(f'  [mann2019] M_Ks = {M_Ks:.4f}')
-
-    # Valid range for both relations (approx. M0--M7)
-    M_KS_MIN, M_KS_MAX = 4.0, 10.0
-    if not (M_KS_MIN <= M_Ks <= M_KS_MAX):
-        if verbose:
-            print(
-                f'  [mann2019] M_Ks={M_Ks:.3f} outside valid range '
-                f'[{M_KS_MIN}, {M_KS_MAX}]. Using fallback.'
-            )
-        return fallback_mass, fallback_radius, True
-
-    # ── Mass: Mann et al. 2019, Eq. 4 / Table 1 ──────────────────────────────
-    # Polynomial: M/M_sun = sum_i a_i * M_Ks^i  (i = 0 .. N)
-    # Optional metallicity correction: + f * [Fe/H]
-    #
-    # !! VERIFY THESE AGAINST TABLE 1 OF Mann+2019 (ApJ 871 63) !!
-    mass_coeffs = np.array([
-        # a_0, a_1, a_2, a_3, a_4  — confirm order and values from Table 1
-        -0.642,
-        -0.208,
-        -8.43e-4,
-         7.87e-4,
-         1.42e-4,
-    ])
-    # Metallicity correction coefficient (Mann+2019 Table 1)
-    # !! VERIFY THIS VALUE !!
-    mass_feh_coeff = 0.0  # placeholder; replace with f from Table 1
-
-    mass = np.polyval(mass_coeffs[::-1], M_Ks)  # polyval expects high→low order
-    if use_metallicity:
-        mass += mass_feh_coeff * feh
-
-    # ── Radius: Mann et al. 2015, Eq. 4 / Table 1 ────────────────────────────
-    # Polynomial: R/R_sun = sum_i b_i * M_Ks^i  (i = 0 .. N)
-    #
-    # !! VERIFY THESE AGAINST TABLE 1 OF Mann+2015 (ApJ 804 64) !!
-    radius_coeffs = np.array([
-        # b_0, b_1, b_2  — confirm order and values from Table 1
-         1.9515,
-        -0.3520,
-         0.01680,
-    ])
-
-    radius = np.polyval(radius_coeffs[::-1], M_Ks)
-
-    # ── Sanity clamp (unphysical outputs → fallback) ──────────────────────────
-    if not (0.05 < mass < 1.0) or not (0.05 < radius < 1.0):
-        if verbose:
-            print(
-                f'  [mann2019] Unphysical result: M={mass:.4f}, R={radius:.4f}. '
-                f'Using fallback.'
-            )
-        return fallback_mass, fallback_radius, True
-
-    if verbose:
-        print(
-            f'  [mann2019] M={mass:.4f} M_sun, R={radius:.4f} R_sun '
-            f'(met. correction: {use_metallicity})'
-        )
-
-    return mass, radius, False
-
-
 def get_qld(star,
             verbose,
             mdwarf_fallback_mass: float = 0.4,
@@ -11279,16 +10478,10 @@ def get_qld(star,
     star['qld_b'] = b
 
     return star
-
-
-################################################################################################
-################################################################################################
-##        
 #
-# NEW
+#
+#
 from astropy.visualization.wcsaxes import WCSAxes
-
-
 
 def fix_wcs_axis_labels(ax, ra_label="RA", dec_label="DEC",
                         fontsize=10, show_grid=False,
@@ -11341,8 +10534,9 @@ def fix_wcs_axis_labels(ax, ra_label="RA", dec_label="DEC",
         ax.coords.grid(color="white", ls=":", alpha=0.4)
 
     return ax
-
-# NEW
+#
+#
+#
 def format_ax(ax, hdu):
     """
     This function will format the subplot
@@ -11375,7 +10569,7 @@ def format_ax(ax, hdu):
     ax.set_title('Aperture and Background Masks')
     #NEW
     fix_wcs_axis_labels(ax, ra_label="RA", dec_label="DEC", fontsize=10)
-##
+#
 #
 #    
 def plot_mask(mask,mask_color,ax):
@@ -11403,65 +10597,6 @@ def plot_mask(mask,mask_color,ax):
                 ax.add_patch(rect)
 #    
 #
-def plot_image_and_mask_OLD(hdu,pix_mask,bkg_mask,ax,fig,cbarpad,
-                        cmap=None,pix_color=None,bkg_color=None):
-    """
-    This function will plot the Full Frame Image or 
-    Target Pixel File (FFI/TPF) images and input 
-    aperture and background pixel masks.
-    Input Parameters
-    ----------
-    hdu : FITS object
-    Astropy Header Data Unit List of TESS FFI/TPF for target star.
-    Contains PrimaryHDU, BinTableHDU and ImageHDU.
-    pix_mask : array
-        Input aperture pixel mask array    
-    bkg_mask : array
-        Input background flux pixel mask array            
-    ax : Matplotlib pyplot subplot axis
-    fig: Matplotlib pyplot figure
-    Returns
-    -------
-        * Nothing.
-    """    
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-    
-    
-    if cmap is None:
-        cmap='gray_r'
-    if pix_color is None:
-        pix_color='red'
-    if bkg_color is None:
-        bkg_color='pink'
-    fs=8
-    median_image = np.nanmedian(hdu[1].data['FLUX'],axis=0)
-    #
-    medi_img = ax.imshow(median_image, cmap="gray_r",alpha=0.9, aspect="auto",vmin=0, vmax=np.nanmax(median_image))
-    medi_img.set_clim(vmin=0, vmax=np.nanmax(median_image))
-    ax.imshow(median_image, cmap="gray_r",alpha=0.9, aspect="auto",vmin=0, vmax=np.nanmax(median_image))
-    plot_mask(pix_mask,'red',ax)
-    plot_mask(bkg_mask,'pink',ax)
-    #
-    #
-    axins = inset_axes(ax, width = "3%", height = "100%", loc = 'lower left',
-                   bbox_to_anchor = (1.01, 0., 1, 1), bbox_transform = ax.transAxes,
-                   borderpad = 0)
-    cbar = fig.colorbar(medi_img,ax=ax,pad=cbarpad,cax = axins)
-    cbar.ax.set_ylabel('Median Photon Counts', fontsize = fs,rotation=270)
-    if np.nanmax(median_image) > 1e4:
-        fs=fs-2
-        cbar.ax.get_yaxis().labelpad = fs
-        import matplotlib.ticker as ticker
-        def fmt(x, pos):
-            a, b = '{:.0e}'.format(x).split('e')
-            b = int(b)
-            return r'${} \times 10^{{{}}}$'.format(a, b)
-        cbar.ax.yaxis.set_major_formatter(ticker.FuncFormatter(fmt))
-        cbar.ax.tick_params(labelsize=fs)
-    else:
-        cbar.ax.get_yaxis().labelpad = fs
-        cbar.ax.tick_params(labelsize=fs)
 #
 def plot_image_and_mask(hdu,ID, nearby_star_catalog, pix_mask,bkg_mask,ax,fig,cbarpad,
                         cmap=None,pix_color=None,bkg_color=None):
@@ -11528,7 +10663,7 @@ def plot_image_and_mask(hdu,ID, nearby_star_catalog, pix_mask,bkg_mask,ax,fig,cb
     target_ra  = float(nearby_star_catalog.loc[nearby_star_catalog['ID'].astype(str)==str(ID), 'ra'].iloc[0])
     target_dec = float(nearby_star_catalog.loc[nearby_star_catalog['ID'].astype(str)==str(ID), 'dec'].iloc[0])
     tpx = wcs_ap.all_world2pix([[target_ra, target_dec]], 0)
-
+#
 #
 #
 def plot_sources(starname,catalogData,cut_catalogData,hdu,ax,
@@ -11572,7 +10707,6 @@ def plot_sources(starname,catalogData,cut_catalogData,hdu,ax,
     path = default_settings.get('path')
     savelcpath = default_settings.get('savelcpath')
     verbose = default_settings.get('verbose')
-    #wcs=WCS(hdu[2].header)
     wcs = check_wcs(hdu)  # use first FFI/TPF
     #
     radecs = np.vstack([np.array(catalogData['ra']),np.array(catalogData['dec'])]).T
@@ -11584,7 +10718,7 @@ def plot_sources(starname,catalogData,cut_catalogData,hdu,ax,
         coords = wcs.all_world2pix(cut_radecs, 0)
     #
     #
-    offset=0#.5
+    offset=0
     if len(cut_catalogData) >0:    
         df = pd.DataFrame(data=dict(x=coords[:, 0]+offset, y=coords[:, 1]+offset, mag=cut_catalogData['Tmag'], IDs=cut_catalogData['ID']))
         #
@@ -11642,7 +10776,6 @@ def plot_sources(starname,catalogData,cut_catalogData,hdu,ax,
     cutoutsize=np.shape(hdu[1].data['FLUX'][0])[0]
     if verbose==True:
         print('plot_sources: Sector',Sector)
-    #cxs,cys = check_centroids(int(starname[4:]),Sector,get_all_sectors,cutoutsize,cadence,reference_pixel,path,savelcpath)
     cxs,cys = check_centroids(ID=int(starname[4:]), Sector=Sector,cadence=cadence, 
                               reference_pixel=reference_pixel, default_settings=default_settings)
     #
@@ -11654,266 +10787,11 @@ def plot_sources(starname,catalogData,cut_catalogData,hdu,ax,
 #        
 #
 #
-def plot_cutouts_OLD(ID, nearby_star_catalog, Sector, cadence, hdu,
-                 pix_mask, bkg_mask, reference_pixel, ncols, fig, ax,
-                 cbarpad, default_settings):
-    """
-    This function will plot the median flux image of the input 
-    Full Frame Image or Target Pixel File (FFI/TPF) along with
-    the input photometric aperture and background flux pixel
-    masks.
-    Input Parameters
-    ----------
-    ID : int
-        TESS Input Catalog identification number
-    Sector : int or list or None
-        TESS Sector Number. Valid inputs include:
-            * 1
-            * [1,2,3]
-            * None
-        Alternatively, setting get_all_sectors=True will return 
-        all available TESS light curves. 
-    get_all_sectors: boolean
-        This flag is used to determine whether or not to process all 
-        available TESS Sector 1-26 observations for the input target star.
-        Valid inputs include: 
-            * True, all hdu and light curves will be produced as 
-            concatenated lists and pandas Dataframe, respectfully. 
-            * False, NEMESIS will only produce light curves for the 
-            requested sectors listed in the 'Sector' input parameter. 
-        Setting 'Sector'=None is the same as setting 'get_all_sectors'=True.     
-    cadence : str
-        The desired cadence of TESS observations for input target star.
-    hdu : FITS object
-    Astropy Header Data Unit List of TESS FFI/TPF for target star.
-    Contains PrimaryHDU, BinTableHDU and ImageHDU.
-    pix_mask : array
-        Input photometric aperture pixel mask array    
-    bkg_mask : array
-        Input background flux pixel mask array            
-    reference_pixel : list
-        A list of X,Y coordinates of the FFI/TPF Row,Column 
-        pixel location of the target star.            
-    ncols : int
-        Number of columns for subplot legend.
-    fig : matplotlib pyplot Figure
-    ax : Matplotlib pyplot subplot axis  
-    path : str
-        This pathname is the location of where to place NEMESIS data products.            
-    savelcpath : str
-        Pathname of directory for output NEMESIS light curves.
-    downloadpath : str
-        Pathname of directory for cached TESScut, Vizier, MAST queried data products.
-    Returns
-    -------
-        * Nothing.
-    """    
-    from astropy.io.fits import HDUList
-
-    # read in default settings
-    get_all_sectors = default_settings.get('get_all_sectors')
-    savelcpath      = default_settings.get('savelcpath')
-    verbose         = default_settings.get('verbose')
-
-    # ── HDU selection ─────────────────────────────────────────────────────────
-    # CRITICAL: HDUList is a subclass of list, so isinstance(hdu, list) is True
-    # for a proper 3-extension HDUList — which would destructure it into bare
-    # extension objects.  Use `type(hdu) is list` to match *only* plain Python
-    # lists (e.g. a multi-sector list of HDULists) and leave HDULists intact.
-    if type(hdu) is list or (isinstance(hdu, HDUList) and len(hdu) < 3):
-
-        if type(hdu) is list:
-            hdu = [h for h in hdu if h is not None]  # drop Nones
-
-        hdus      = hdu if type(hdu) is list else [hdu]
-        bkg_masks = bkg_mask if type(bkg_mask) is list else [bkg_mask]
-        pix_masks = pix_mask if type(pix_mask) is list else [pix_mask]
-
-        for i in range(len(hdus)):
-            if hdus[i] is not None:
-                hdu      = hdus[i]
-                bkg_mask = bkg_masks[i] if i < len(bkg_masks) else bkg_masks[0]
-                pix_mask = pix_masks[i] if i < len(pix_masks) else pix_masks[0]
-                try:
-                    Sector = hdu[0].header['Sector']
-                except (AttributeError, KeyError, IndexError, TypeError):
-                    try:
-                        Sector = hdu.header['Sector']
-                    except Exception:
-                        pass
-                break
-
-    # At this point hdu must be an HDUList. If a bare HDU slipped through, wrap.
-    if not isinstance(hdu, HDUList):
-        hdu = HDUList([hdu])
-
-    # ── plot ──────────────────────────────────────────────────────────────────
-    starname = 'TIC ' + str(ID)
-
-    nearby_star_catalog_in_aperture = get_sources_in_aperture_mask(
-        ID, hdu, pix_mask, nearby_star_catalog, verbose=False)
-    cdf, cut_cdf = nearby_star_catalog, nearby_star_catalog_in_aperture
-
-    plot_image_and_mask(hdu, ID, nearby_star_catalog,pix_mask, bkg_mask, ax, fig, cbarpad=cbarpad)
-    format_ax(ax, hdu)
-
-    if Sector is None or type(Sector) is list:
-        from pathlib import Path as check_Path
-        Sectors = search_sectors_from_filetype_and_path(ID, default_settings)
-        if verbose:
-            print('plot_cutout: Sectors:', Sectors)
-        Sector = Sectors[0]
-
-    if verbose:
-        print('plot_cutout: Sector:', Sector)
-
-    # Argument order matches plot_sources signature:
-    # (starname, catalogData, cut_catalogData, hdu, ax,
-    #  Sector, cadence, reference_pixel, pix_mask, default_settings)
-    plot_sources(starname, cdf, cut_cdf, hdu, ax,
-                 Sector, cadence, reference_pixel,
-                 pix_mask, default_settings)
-    plot_orientation(hdu, ax)
-
-    # ── legend: magnitude differences of nearby sources ───────────────────────
-    mag     = cdf.loc[cdf['ID'] == str(ID)]['Tmag'].item()
-    maxmag  = np.max(cdf['Tmag'])
-    fake_sizes = mag + np.linspace(0, maxmag, 6)
-    for f in fake_sizes[::-1]:
-        if (f - mag) <= 10:
-            size = (0.25 * 128.0 / 2 ** ((1 / 2.5) * (f - mag)))
-            ax.scatter(-1, -1, s=size, c='cyan', alpha=0.6, edgecolor=None,
-                       zorder=10, label=r'$\Delta Tmag=$ ' + str(int(f - mag)))
-
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], ncol=ncols, loc='lower right',
-              fontsize=8, borderpad=0, borderaxespad=0.,
-              handletextpad=0, labelspacing=0, columnspacing=0)
-#
-def plot_cutouts_ALTb(
-    ID, nearby_star_catalog, Sector, cadence, hdu,
-    pix_mask, bkg_mask, reference_pixel, ncols, fig, ax,
-    cbarpad, default_settings, catalog_source: str = "TIC",):
-    """
-    Drop-in alternative to ``plot_cutouts`` with a ``catalog_source`` switch.
-
-    When ``catalog_source='gaia'``: queries Gaia DR3 via
-    ``collect_nearby_Gaia_params`` (which restricts to the cutout bounding box
-    and applies proper-motion correction to the TPF epoch), then draws the
-    overlay via ``plot_sources_gaia``. The legacy TIC ΔTmag legend block is
-    suppressed in this branch to avoid stacking two inconsistent legends on
-    the same axis.
-
-    When ``catalog_source='tic'``: behaves exactly like the original
-    ``plot_cutouts``, including the TIC-Tmag legend.
-
-    Parameters
-    ----------
-    All parameters match ``plot_cutouts`` apart from:
-    catalog_source : {'TIC', 'gaia'}
-        Which catalog to overlay. Default 'TIC' for backward compatibility.
-
-    Returns
-    -------
-    gaia_df : pd.DataFrame or None
-        The trimmed Gaia DR3 catalog when ``catalog_source='gaia'``; None
-        otherwise.
-    """
-    from astropy.io.fits import HDUList
-
-    get_all_sectors = default_settings.get("get_all_sectors")
-    savelcpath = default_settings.get("savelcpath")
-    verbose = default_settings.get("verbose")
-
-    # HDU selection (unchanged).
-    if type(hdu) is list or (isinstance(hdu, HDUList) and len(hdu) < 3):
-        if type(hdu) is list:
-            hdu = [h for h in hdu if h is not None]
-        hdus = hdu if type(hdu) is list else [hdu]
-        bkg_masks = bkg_mask if type(bkg_mask) is list else [bkg_mask]
-        pix_masks = pix_mask if type(pix_mask) is list else [pix_mask]
-        for i in range(len(hdus)):
-            if hdus[i] is not None:
-                hdu = hdus[i]
-                bkg_mask = bkg_masks[i] if i < len(bkg_masks) else bkg_masks[0]
-                pix_mask = pix_masks[i] if i < len(pix_masks) else pix_masks[0]
-                try:
-                    Sector = hdu[0].header["Sector"]
-                except (AttributeError, KeyError, IndexError, TypeError):
-                    try:
-                        Sector = hdu.header["Sector"]
-                    except Exception:
-                        pass
-                break
-    if not isinstance(hdu, HDUList):
-        hdu = HDUList([hdu])
-
-    starname = "TIC " + str(ID)
-
-    # Aperture-membership table (still computed for TIC even when plotting Gaia,
-    # so the legacy code path remains intact when catalog_source='TIC').
-    nearby_star_catalog_in_aperture = get_sources_in_aperture_mask(
-        ID, hdu, pix_mask, nearby_star_catalog, verbose=False)
-    cdf, cut_cdf = nearby_star_catalog, nearby_star_catalog_in_aperture
-
-    plot_image_and_mask(hdu, ID, nearby_star_catalog, pix_mask, bkg_mask, ax, fig, cbarpad=cbarpad)
-    format_ax(ax, hdu)
-
-    if Sector is None or type(Sector) is list:
-        Sectors = search_sectors_from_filetype_and_path(ID, default_settings)
-        if verbose:
-            print("plot_cutouts_ALT: Sectors:", Sectors)
-        Sector = Sectors[0]
-    if verbose:
-        print("plot_cutouts_ALT: Sector:", Sector)
-
-    gaia_df = None
-    if catalog_source.lower() == "gaia":
-        gaia_df, target_gaia_id, target_gmag = collect_nearby_Gaia_params(
-            ID=ID, hdu=hdu, verbose=verbose)
-        plot_sources_gaia(
-            ID, hdu, ax,
-            gaia_catalog=gaia_df,
-            target_gaia_id=target_gaia_id,
-            target_gmag=target_gmag,
-            pix_mask=pix_mask,
-            reference_pixel=reference_pixel,
-            Sector=Sector, cadence=cadence,
-            default_settings=default_settings,
-        )
-    else:
-        plot_sources(starname, cdf, cut_cdf, hdu, ax,
-                     Sector, cadence, reference_pixel,
-                     pix_mask, default_settings)
-
-    plot_orientation(hdu, ax)
-
-    # IMPORTANT: only run the legacy TIC ΔTmag legend block in the TIC branch.
-    # In the Gaia branch, plot_sources_gaia already attached its own legend.
-    if catalog_source.lower() != "gaia":
-        mag = cdf.loc[cdf["ID"] == str(ID)]["Tmag"].item()
-        maxmag = np.max(cdf["Tmag"])
-        fake_sizes = mag + np.linspace(0, maxmag, 6)
-        for f in fake_sizes[::-1]:
-            if (f - mag) <= 10:
-                size = (0.25 * 128.0 / 2 ** ((1 / 2.5) * (f - mag)))
-                ax.scatter(-1, -1, s=size, c="cyan", alpha=0.6, edgecolor=None,
-                           zorder=10, label=r"$\Delta Tmag=$ " + str(int(f - mag)))
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles[::-1], labels[::-1], ncol=ncols, loc="lower right",
-                  fontsize=8, borderpad=0, borderaxespad=0.,
-                  handletextpad=0, labelspacing=0, columnspacing=0)
-
-    format_ax(ax,hdu)
-    fix_wcs_axis_labels(ax, ra_label="RA", dec_label="DEC", fontsize=10)
-    return gaia_df
-
-
 def plot_sources_TIC(
     ID: int,
     hdu,
     ax,
-    tic_catalog,          # nearby_star_catalog from collect_nearby_TIC_params
+    tic_catalog, 
     pix_mask=None,
     reference_pixel=None,
     Sector=None,
@@ -12661,9 +11539,6 @@ def plot_cutouts_ALT(
             draw_legend=False, # we don't want legend here            
         )
     else:
-#         plot_sources(starname, cdf, cut_cdf, hdu, ax,
-#                      Sector, cadence, reference_pixel,
-#                      pix_mask, default_settings)
         plot_sources_TIC(
             ID, hdu, ax,
             tic_catalog=nearby_star_catalog,
@@ -13637,15 +12512,10 @@ def Applying_Mdump_removal(ID,Sector,hdu,SAP_LC,flux,combined_mask,
     verbose = default_settings.get('verbose')
     get_all_sectors = default_settings.get('get_all_sectors')
     #
-    # do_jittermask         = default_settings.get('do_jittermask') #DEPRECATED
     do_mdump_removal      = default_settings.get('do_mdump_removal')
     do_sector_jitter_mask = default_settings.get('do_sector_jitter_mask')  
     
-    # Step 0: define string tag for sector usage (single or multi)
-#     if get_all_sectors or Sector is None or not isinstance(Sector, int):
-#         sector_tag = "Multi_Sector"
-#     else:
-#         sector_tag = f"Sector_{Sector:04d}"    
+    # Step 0: define string tag for sector usage (single or multi)    
     if isinstance(Sector, int):
         sector_tag = f"Sector_{Sector:04d}"
     else:
@@ -13664,8 +12534,6 @@ def Applying_Mdump_removal(ID,Sector,hdu,SAP_LC,flux,combined_mask,
     quality_flag  = SAP_LC['QUALITY_FLAG'].to_numpy(dtype=int)
     ###
     if keep_mdumps==True:
-        # run this to get t_0, t_1 and return mask_mdump as NaN
-#         t_0,t_1 = TESS_orbit_start_check(Sector)
         orbit1_start,orbit1_stop, orbit2_start,orbit2_stop = TESS_Sector_observation_check(SectorNum=Sector)
         t_0, t_1 = orbit1_start,orbit2_stop
         
@@ -13675,9 +12543,6 @@ def Applying_Mdump_removal(ID,Sector,hdu,SAP_LC,flux,combined_mask,
         sap_error=sap_error
         bkg_flux=bkg_flux
         bkg_error=bkg_error        
-#         clippedRAWLC_df = pd.DataFrame({"Time":time, 
-#                                         "SAP Flux": sap_flux, "SAP Error":sap_error,
-#                                         "Background Flux":bkg_flux,"Background Error":bkg_error})
         clippedRAWLC_df = pd.DataFrame({"CADENCE_INDEX": cadence_index, "Time": time,
                                         "SAP Flux": sap_flux, "SAP Error": sap_error,
                                         "Background Flux": bkg_flux, "Background Error": bkg_error,
@@ -13709,9 +12574,6 @@ def Applying_Mdump_removal(ID,Sector,hdu,SAP_LC,flux,combined_mask,
         ###
         if verbose==True:
             print('clipped len check:', len(time),len(sap_flux),len(sap_error))
-#         clippedRAWLC_df = pd.DataFrame({"Time":time, 
-#                                         "SAP Flux": sap_flux, "SAP Error":sap_error,
-#                                         "Background Flux":bkg_flux,"Background Error":bkg_error})
         clippedRAWLC_df = pd.DataFrame({ "CADENCE_INDEX": cadence_index[mask_mdump], "Time": time,
                                         "SAP Flux": sap_flux, "SAP Error": sap_error,
                                         "Background Flux": bkg_flux, "Background Error": bkg_error,
@@ -13719,13 +12581,9 @@ def Applying_Mdump_removal(ID,Sector,hdu,SAP_LC,flux,combined_mask,
         ###
         clippedRAWLC_df.to_csv(savelcpath+"TIC_"+str(ID)+f"_{sector_tag}_RAW_LC_systematics_removed.csv",index=False)
         ###
-#         if verbose==True:
-#             print('len check b',' T', len(time),' SAP',len(sap_flux), ' E ', len(sap_error))
     ###
     ###
     return mask_mdump, t_0, t_1, flux, SAP_LC, clippedRAWLC_df
-#
-#
 #
 #
 # helper functions for smoothing and outlier removal based on stellar parameters
@@ -13810,7 +12668,6 @@ def T14(P, R_star, M_star, R_planet, b=0, i=90): #will replace Tdur above
     piece_B3 = 1 / np.sin(i)  # Dimensionless
 
     # Combine the parts for the full duration calculation
-#     arcsin_argument = np.clip(piece_B1 * piece_B2 * piece_B3, -1, 1)  # Ensure arcsin argument is valid
     arcsin_argument = piece_B1 * piece_B2 * piece_B3
     angle_radians = np.arcsin(arcsin_argument)  # Result in radians
 
@@ -13868,7 +12725,6 @@ def T23(P, R_star, M_star, R_planet, b=0, i=90):
     piece_B3 = 1 / np.sin(i)  # Dimensionless
 
     # Combine the parts for the full duration calculation
-#     arcsin_argument = np.clip(piece_B1 * piece_B2 * piece_B3, -1, 1)  # Ensure arcsin argument is valid
     arcsin_argument = piece_B1 * piece_B2 * piece_B3
     angle_radians = np.arcsin(arcsin_argument)  # Result in radians
 
@@ -13900,303 +12756,6 @@ def convert_window_size_in_days_to_points(window_size_in_days,time):
     Npts = round_up_to_odd(int((window_size_in_days)/cad))
     return Npts
 #
-#
-#
-def Smoother_OLD( ID: int, nearby_star_catalog, Sector, input_LC,
-    default_settings: dict, break_tolerance_in_days: Optional[float] = None,
-    # ── mode control ──────────────────────────────────────────────────────────
-    mode: str = "uniform",          # "uniform" | "ls"
-    # ── shared ────────────────────────────────────────────────────────────────
-    transit_dur_factor: float = 3.0,
-    # ── LS-mode only ──────────────────────────────────────────────────────────
-    rot_divisor: float = 5.0, min_prot_days: float = 0.5,
-):
-    """
-    Smooth the PLD-corrected light curve with a biweight running window.
-
-    Estimates an appropriate smoothing window from stellar parameters
-    (and optionally a Lomb-Scargle rotation period estimate), then runs
-    ``wotan.flatten`` with ``method='biweight'`` to produce a detrended LC
-    and a fitted trend.
-
-    Two modes are available via the ``mode`` parameter (or via
-    ``default_settings['smoother_mode']``; the ``mode`` kwarg takes
-    precedence).
-
-    Mode: ``"uniform"`` (default)
-    ------------------------------
-    Window derived purely from stellar parameters — guarantees the same
-    window across all sectors for a given star, making multi-sector
-    concatenated LCs internally consistent:
-
-        ``window = transit_dur_factor × T14(P = T_span/2, R_*, M_*, R_p=1 RE)``
-
-    Use this mode when P_rot is unknown, cadence-limited, or when
-    processing multi-sector light curves.
-
-    Mode: ``"ls"``
-    ---------------
-    Window informed by a Lomb-Scargle rotation-period estimate on the
-    SAP flux:
-
-        ``w_rot  = P_rot / rot_divisor``
-        ``window = max(transit_floor, w_rot)``
-
-    Falls back to the uniform floor if LS fails or peak FAP > 0.01.
-    Useful for single-sector analysis of moderately rotating M-dwarfs.
-
-    Parameters
-    ----------
-    ID : int
-        TIC identifier; used to look up stellar parameters.
-    nearby_star_catalog : pd.DataFrame
-        Stellar catalog from ``collect_nearby_TIC_params``.
-    Sector : int, list, or None
-        Sector(s) being processed; used only in verbose output.
-    input_LC : pd.DataFrame
-        PLD-corrected light curve from ``PLD_model``.  Required columns:
-        ``'Time'``, ``'Flux'``, ``'Error'``, ``'Model'``,
-        ``'SAP Flux'``, ``'SAP Error'``,
-        ``'Background Flux'``, ``'Background Error'``,
-        ``'Centroid X Positions'``, ``'Centroid Y Positions'``.
-    default_settings : dict
-        NEMESIS settings dict.  Consumed keys:
-        ``savelcpath``, ``verbose``,
-        ``window_size_in_days`` (explicit override; skips all estimation),
-        ``smoother_mode`` (overridden by the ``mode`` kwarg).
-    break_tolerance_in_days : float or None, optional
-        Reserved for ``wotan.flatten`` gap-handling; not currently passed
-        through.  Default is ``None``.
-    mode : str, optional
-        ``"uniform"`` or ``"ls"``.  Overrides
-        ``default_settings['smoother_mode']``.  Default is ``"uniform"``.
-    transit_dur_factor : float, optional
-        Multiplier on T14 for the transit-preservation window floor.
-        Default is ``3.0``.
-    rot_divisor : float, optional
-        Divisor applied to P_rot to obtain the LS-mode window
-        (``ls`` mode only).  Default is ``5.0``.
-    min_prot_days : float, optional
-        LS peaks shorter than this period are discarded as aliases
-        (``ls`` mode only).  Default is ``0.5`` days.
-
-    Returns
-    -------
-    Det_LC : pd.DataFrame
-        Detrended light curve with columns:
-        ``Time``, ``SAP Flux``, ``SAP Error``,
-        ``Background Flux``, ``Background Error``,
-        ``Detrended Flux``, ``Detrended Error``, ``Fitted Trend``,
-        ``PLD Flux``, ``PLD Error``, ``PLD Model``,
-        ``Centroid X Positions``, ``Centroid Y Positions``.
-    nanmask : np.ndarray of int
-        Indices into the input arrays where the detrended flux is finite.
-        Used by the caller to align subsequent steps.
-
-    Examples
-    --------
-    >>> Det_LC, nm = Smoother(ID, cat, Sector, input_LC2, default_settings)
-
-    >>> Det_LC, nm = Smoother(ID, cat, Sector, input_LC2, default_settings,
-    ...                       mode="ls")
-
-    >>> # explicit window override
-    >>> default_settings['window_size_in_days'] = 0.5
-    >>> Det_LC, nm = Smoother(ID, cat, Sector, input_LC2, default_settings)
-    """
-    from wotan import flatten
-    import pandas as pd
-
-    savelcpath  = default_settings.get('savelcpath')
-    verbose     = default_settings.get('verbose')
-    user_window = default_settings.get('window_size_in_days')   # explicit override
-
-    # resolve active mode (kwarg beats default_settings key)
-    active_mode = default_settings.get('smoother_mode', 'uniform')
-    if mode != 'uniform':          # caller passed a non-default kwarg
-        active_mode = mode
-
-    # ── unpack input LC arrays ────────────────────────────────────────────────
-    time       = input_LC['Time'].to_numpy(dtype=np.float64)
-    flux_raw   = input_LC['Flux'].to_numpy(dtype=np.float64)
-    flux_error = input_LC['Error'].to_numpy(dtype=np.float64)
-    flux_model = input_LC['Model'].to_numpy(dtype=np.float64)
-    centx      = input_LC['Centroid X Positions'].to_numpy(dtype=np.float64)
-    centy      = input_LC['Centroid Y Positions'].to_numpy(dtype=np.float64)
-    sap_flux   = input_LC['SAP Flux'].to_numpy(dtype=np.float64)
-    sap_error  = input_LC['SAP Error'].to_numpy(dtype=np.float64)
-    bkg_flux   = input_LC['Background Flux'].to_numpy(dtype=np.float64)
-    bkg_error  = input_LC['Background Error'].to_numpy(dtype=np.float64)
-    #
-    cadence_index = (
-        input_LC['CADENCE_INDEX'].to_numpy(dtype=int)
-        if 'CADENCE_INDEX' in input_LC.columns
-        else np.arange(len(time), dtype=int)
-    )
-    #
-    quality_flag = (
-        input_LC['QUALITY_FLAG'].to_numpy(dtype=int)
-        if 'QUALITY_FLAG' in input_LC.columns
-        else np.zeros(len(time), dtype=int)
-    )
-    #
-    #
-    # ── stellar parameters (needed by both modes for the floor) ───────────────
-    star   = nearby_star_catalog.loc[
-        nearby_star_catalog['ID'] == str(ID)
-    ].reset_index(drop=True)
-    star   = get_qld(star, verbose)
-    R_star = star['rad'].item()
-    M_star = star['mass'].item()
-
-    lc_dur   = float(np.nanmax(time) - np.nanmin(time))
-    max_P    = lc_dur / 2.0
-    cad_days = float(np.nanmedian(np.diff(time)))
-
-    # transit-preservation floor (shared by both modes)
-    floor = transit_dur_factor * T14(
-        P=max_P, R_star=R_star, M_star=M_star, R_planet=1.0)
-    floor = max(floor, 6.0 * cad_days)
-
-    # ── determine smoothing window ────────────────────────────────────────────
-    if user_window is not None:
-        # explicit user override — no estimation needed
-        window_size_in_days = user_window
-        if verbose:
-            print(f'[Smoother] user-supplied window={window_size_in_days:.3f} d '
-                  f'(mode ignored)')
-
-    elif active_mode == 'uniform':
-        # ── UNIFORM MODE (Smoother_OLD behaviour) ─────────────────────────────
-        # Window derived entirely from stellar parameters; no LS call.
-        # Guarantees the same window across every sector for this star.
-        window_size_in_days = floor
-        if verbose:
-            print(f'[Smoother] uniform mode: '
-                  f'transit-floor window = {window_size_in_days:.3f} d '
-                  f'(R*={R_star:.3f}, M*={M_star:.3f})')
-
-    else:
-        # ── LS MODE ───────────────────────────────────────────────────────────
-        # Attempt to estimate P_rot from SAP flux via Lomb-Scargle.
-        p_rot_est = None
-        min_p_ls  = max(min_prot_days, 3.0 * cad_days)
-        max_p_ls  = lc_dur / 1.5
-
-        if max_p_ls > min_p_ls and np.sum(np.isfinite(sap_flux)) >= 50:
-            try:
-                _, power, p_peak, _, peak_fap = LS(
-                    time[np.isfinite(sap_flux)],
-                    (sap_flux / np.nanmedian(sap_flux))[np.isfinite(sap_flux)],
-                    min_period=min_p_ls,
-                    max_period=max_p_ls,
-                    nterms=1,
-                )
-                if peak_fap < 0.01:
-                    p_rot_est = float(p_peak)
-            except Exception as exc:
-                if verbose:
-                    print(f'[Smoother] LS failed: {exc}')
-
-        if p_rot_est is not None:
-            w_rot = p_rot_est / rot_divisor
-            window_size_in_days = max(floor, w_rot)
-            if verbose:
-                if w_rot < floor:
-                    print(f'[Smoother] ls mode: P_rot={p_rot_est:.3f} d → '
-                          f'w_rot={w_rot:.3f} d < floor={floor:.3f} d '
-                          f'(fast rotator; floor used)')
-                else:
-                    print(f'[Smoother] ls mode: P_rot={p_rot_est:.3f} d → '
-                          f'window={window_size_in_days:.3f} d '
-                          f'(floor={floor:.3f} d)')
-        else:
-            # LS failed or FAP too high → fall back to uniform floor
-            window_size_in_days = floor
-            if verbose:
-                print(f'[Smoother] ls mode: LS estimate unavailable; '
-                      f'falling back to uniform floor={floor:.3f} d')
-
-    # ── biweight flattening ───────────────────────────────────────────────────
-    flatten_lc, trend_lc = flatten(
-        time, flux_raw,
-        window_length=window_size_in_days,
-        return_trend=True,
-        method='biweight',
-        robust=True,
-    )
-
-    nanmask = np.where(np.isfinite(flatten_lc))[0]
-
-    # ── medfilt fallback if biweight produced all NaNs ────────────────────────
-    if len(nanmask) < 1:
-        if verbose:
-            print('[Smoother] biweight returned all NaN; falling back to medfilt')
-        win_pts = convert_window_size_in_days_to_points(window_size_in_days, time)
-        flatten_lc, trend_lc = flatten(
-            time, flux_raw,
-            window_length=win_pts,
-            return_trend=True,
-            method='medfilt',
-            robust=True,
-        )
-        nanmask = np.where(np.isfinite(flatten_lc))[0]
-
-    # ── apply nanmask ─────────────────────────────────────────────────────────
-    def _m(a): 
-        return a[nanmask]
-
-    T          = _m(time)
-    F          = _m(flatten_lc)
-    FE         = _m(flux_error)
-    trend_lc   = _m(trend_lc)
-    flux_model = _m(flux_model)
-    centx      = _m(centx)
-    centy      = _m(centy)
-    sap_flux   = _m(sap_flux)
-    sap_error  = _m(sap_error)
-    bkg_flux   = _m(bkg_flux)
-    bkg_error  = _m(bkg_error)
-    flux_raw_m = _m(flux_raw)
-    
-    cadence_index = _m(cadence_index)
-    quality_flag  = _m(quality_flag)
-
-    # ── guard against non-positive trend ──────────────────────────────────────
-    # A trend at or below zero flips the sign of Detrended Flux and Error via
-    # the divisions below, producing a negative uncertainty that is problematic. 
-    # Invalidate those cadences (NaN) so the downstream finite-value filters drop them.
-    TREND_FLOOR = 1e-6
-    bad_trend   = ~np.isfinite(trend_lc) | (trend_lc <= TREND_FLOOR)
-
-    safe_trend  = np.where(bad_trend, np.nan, trend_lc)
-    det_error   = FE / safe_trend
-    det_error   = np.where(bad_trend, np.nan, det_error)
-    F           = np.where(bad_trend, np.nan, F)
-
-    if verbose and bad_trend.any():
-        print(f'[Smoother] non-positive/NaN trend at {int(bad_trend.sum())} '
-              f'cadence(s); detrended flux/error set to NaN '
-              f'(dropped by downstream finite filters)')
-
-    Det_LC = pd.DataFrame({
-        'CADENCE_INDEX':         cadence_index,
-        'Time':                  T,
-        'SAP Flux':              sap_flux,
-        'SAP Error':             sap_error,
-        'Background Flux':       bkg_flux,
-        'Background Error':      bkg_error,
-        'PLD Flux':              flux_raw_m,
-        'PLD Error':             FE,
-        'PLD Model':             flux_model,
-        'Detrended Flux':        F,
-        'Detrended Error':       det_error,
-        'Fitted Trend':          trend_lc,
-        'Centroid X Positions':  centx,
-        'Centroid Y Positions':  centy,
-        'QUALITY_FLAG':          quality_flag,
-    })
-    return Det_LC, nanmask
 #
 #
 def Smoother( ID: int, nearby_star_catalog, Sector, input_LC,
@@ -14906,12 +13465,9 @@ def get_PLD_model(
         C = np.linalg.lstsq(A, B, rcond=None)[0]
 
     return X @ C
-
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-
-
+#
+#
+#
 def PLD_model( ID, Sector, flux: np.ndarray, pix_mask: np.ndarray, input_LC, 
               default_settings: dict, window: int = 10, max_dur: float = 1.0,
               Nsigma: float = 15.0, N_transits = None, lambda_reg: float = 0.0, 
@@ -15190,25 +13746,8 @@ def PLD_model( ID, Sector, flux: np.ndarray, pix_mask: np.ndarray, input_LC,
 
     out_det  [vidx] = detrended_v
     out_err  [vidx] = pld_error_v
-    out_model[vidx] = pld2
-
-    # ── restore outlier cadences with neighbour-interpolated baseline ─────────
-    # OLD APPROACH: THIS REPLACES WITH SAP VALUES NOT INITIAL PLD-CORRECTED VALUS
-#     med_sap      = np.nanmedian(f_v)
-#     bad_full_idx = vidx[~out_ok]
-
-#     for fi in bad_full_idx:
-#         left  = (out_det[fi - 1]
-#                  if (fi > 0          and np.isfinite(out_det[fi - 1])) else None)
-#         right = (out_det[fi + 1]
-#                  if (fi < n_full - 1 and np.isfinite(out_det[fi + 1])) else None)
-#         nbrs      = [v for v in (left, right) if v is not None]
-#         baseline  = float(np.nanmean(nbrs)) if nbrs else 1.0
-#         deviation = (orig_sap[fi] - med_sap) / norm
-#         out_det[fi] = baseline + deviation
-#         out_err[fi] = orig_err[fi] / norm
-        
-        
+    out_model[vidx] = pld2       
+    
     # ── restore outlier cadences ──────────────────────────────────────────────
     # Original approach used raw SAP deviations, which re-injects systematics
     # and amplifies transit depths via cascading neighbor interpolation.
@@ -15286,8 +13825,6 @@ def singleoutliers(data, stepsize=1):
     # Filter out sequences that have more than one element, keeping only isolated points
     single = np.array(list(filter(lambda x : len(x) <= 1, single))).flatten() 
     #
-    # More efficient approach? needs testing
-    #single = np.concatenate([x for x in single if len(x) <= 1]) if len(single) > 0 else np.array([])
     #
     ##sort the indcies and make sure they're integers
     single = np.sort(np.array([np.int64(x) for x in single]))
@@ -15396,11 +13933,8 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
     verbose = default_settings.get('verbose')
     window_size_in_days = default_settings.get('window_size_in_days')
     get_all_sectors = default_settings.get('get_all_sectors')
-    # Step 0: define string tag for sector usage (single or multi)
-#     if get_all_sectors or Sector is None or not isinstance(Sector, int):
-#         sector_tag = "Multi_Sector"
-#     else:
-#         sector_tag = f"Sector_{Sector:04d}"   
+    #
+    # Step 0: define string tag for sector usage (single or multi)  
     if isinstance(Sector, int):
         sector_tag = f"Sector_{Sector:04d}"
     else:
@@ -15447,12 +13981,6 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
     #
     #
     #
-#     preclipLC_df = pd.DataFrame({"Time":time, "SAP Flux": sap_flux, "SAP Error":sap_error,
-#                                  "Background Flux": bkg_flux, "Background Error":bkg_error,
-#                                  "PLD Flux":pld_flux,"PLD Error":pld_error, "PLD Model":pld_model,
-#                                  "Detrended Flux":det_flux, "Detrended Error":det_error,"Fitted Trend":trend_lc,
-#                                  "Centroid X Positions":centx,"Centroid Y Positions":centy})
-#
     preclipLC_df = pd.DataFrame({ "CADENCE_INDEX": cadence_index, "Time": time,
                                  "SAP Flux": sap_flux, "SAP Error": sap_error,
                                  "Background Flux": bkg_flux, "Background Error": bkg_error,
@@ -15460,7 +13988,6 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
                                  "Detrended Flux": det_flux, "Detrended Error": det_error, "Fitted Trend": trend_lc,
                                  "Centroid X Positions": centx, "Centroid Y Positions": centy, "QUALITY_FLAG": quality_flag,
                                 })
-
     ###
     ###
     #defining window for removing outliers in local noise
@@ -15502,7 +14029,6 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
         for N in range(1,bins):
             window_start = window_size * (N - 1)
             window_stop  = window_start + window_size
-#             print('Bin '+str(N))
             time_in_window = time[window_start : window_stop ]
             flux_in_window = flux[window_start : window_stop ]
             err_in_window = error[window_start : window_stop ]
@@ -15514,10 +14040,6 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
             #global noise
             ind_lo = np.where(flux_in_window < flux_threshold_lo)[0]
             ind_hi = np.where(flux_in_window > flux_threshold_hi)[0]
-            #print('noise levels')
-            #print(ind_lo)
-            #print(ind_hi)
-            #print(' ')
             ###
             single_lo = singleoutliers(ind_lo)
             single_hi = singleoutliers(ind_hi)
@@ -15564,16 +14086,13 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
             bad_ind_hi,    # isolated brightenings
             good_ind_hi,   # consecutive brightenings (flares) # removed for transit searches
         ]).astype(int))
-
-        good_ind = np.sort(good_ind_lo.astype(int))   # consecutive dips only (transit candidates)    
-            
-            
-            #convert matched elements to intergers
-            ###
-        ###
-        #finally, remove bad points (keep good points) and make new time,flux, error arrays
         #
-        bad_ind = np.asarray(bad_ind, dtype=int) #not sure if needed bc of earlier line
+        good_ind = np.sort(good_ind_lo.astype(int))   # consecutive dips only (transit candidates)    
+        #
+        #
+        # finally, remove bad points (keep good points) and make new time,flux, error arrays
+        #
+        bad_ind = np.asarray(bad_ind, dtype=int) 
         #
         bad_cadence_index = np.asarray(cadence_index)[bad_ind]
         bad_quality_flag  = np.asarray(quality_flag)[bad_ind]
@@ -15588,7 +14107,7 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
             pld_flux, pld_model, pld_error,
             centx, centy)]
         #
-        good_ind = np.asarray(good_ind, dtype=int) #not sure if needed bc of earlier line
+        good_ind = np.asarray(good_ind, dtype=int) 
         #
         good_cadence_index = np.asarray(cadence_index)[good_ind]
         good_quality_flag  = np.asarray(quality_flag)[good_ind]
@@ -15617,33 +14136,14 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
             det_flux, det_error, trend_lc,
             pld_flux, pld_error, pld_model,
             centx, centy)]        
-        #
-        
+        #        
         cadence_index = np.asarray(cadence_index)[keep]
         quality_flag  = np.asarray(quality_flag)[keep]
-        # NEW
         #
-        ###
-        ###
-        ###
         import pandas as pd
         #saving flagged data points
         if verbose==True:
             print('saving flagged outliers')
-#         bad_ind_DF = pd.DataFrame({"Time":badtime, "SAP Flux": badsap_flux, "SAP Error":baderror,
-#                                    "Background Flux": badbkg_flux, "Background Error":badbkg_error,
-#                                    "PLD Flux":badpld_detrended,"PLD Model":badpld_model,"PLD Error":badpld_error,
-#                                    "Detrended Flux":badflux_detrended, "Detrended Error":baddet_error,
-#                                    "Fitted Trend":badtrend_lc,
-#                                    "Centroid X Positions":badcentx,"Centroid Y Positions":badcenty})
-#         ####
-#         good_ind_DF = pd.DataFrame({"Time":goodtime, "SAP Flux": goodsap_flux, "SAP Error":gooderror,
-#                                     "Background Flux": goodbkg_flux, "Background Error":goodbkg_error,
-#                                     "PLD Flux":goodpld_detrended,"PLD Model":goodpld_model,"PLD Error":goodpld_error,
-#                                     "Detrended Flux":goodflux_detrended, "Detrended Error":gooddet_error,
-#                                     "Fitted Trend":goodtrend_lc,
-#                                     "Centroid X Positions":goodcentx,"Centroid Y Positions":goodcenty})
-        #
         bad_ind_DF = pd.DataFrame({"CADENCE_INDEX": bad_cadence_index, "Time": badtime,
                                    "SAP Flux": badsap_flux, "SAP Error": baderror,
                                    "Background Flux": badbkg_flux, "Background Error": badbkg_error,
@@ -15665,19 +14165,12 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
                                     "Centroid X Positions": goodcentx, "Centroid Y Positions": goodcenty,
                                     "QUALITY_FLAG": good_quality_flag,
                                    })        
-        
         #
-        # this could be interesting to keep but is otherwise unused by pipeline elsewhere
-        # this could be interesting to keep but is otherwise unused by pipeline elsewhere
         # this could be interesting to keep but is otherwise unused by pipeline elsewhere
         #bad_ind_DF.to_csv(savelcpath+"TIC_"+str(ID)+f"_{sector_tag}_bad_outliers.txt",index=False)
         #good_ind_DF.to_csv(savelcpath+"TIC_"+str(ID)+f"_{sector_tag}_good_outliers.txt",index=False)
         # this could be interesting to keep but is otherwise unused by pipeline elsewhere
-        # this could be interesting to keep but is otherwise unused by pipeline elsewhere
-        # this could be interesting to keep but is otherwise unused by pipeline elsewhere
-        ###
-        ###
-        ###
+        #
         if verbose==True:
             print('after outlier removal: ',' T', len(time),' Det',len(det_flux), ' trend',len(trend_lc), 'PLD model',len(pld_model),' PLD F',len(pld_flux),' SAP E', len(sap_error))
     ###
@@ -15705,17 +14198,6 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
              det_flux, det_error, trend_lc,
              pld_flux, pld_error, pld_model,
              centx, centy) )
-        # NEW
-#         good_ind_DF = pd.DataFrame({"Time":None, "SAP Flux": None, "SAP Error":None, 
-#                                     "Background Flux": None, "Background Error":None, 
-#                                     "PLD Flux":None,"PLD Model":None,"PLD Error":None,
-#                                     "Detrended Flux":None, "Detrended Error":None,"Fitted Trend":None,
-#                                     "Centroid X Positions":None,"Centroid Y Positions":None}, index=[0])
-#         bad_ind_DF = pd.DataFrame({"Time":None, "SAP Flux": None, "SAP Error":None, 
-#                                    "Background Flux": None, "Background Error":None,                                    
-#                                    "PLD Flux":None,"PLD Model":None,"PLD Error":None,
-#                                    "Detrended Flux":None, "Detrended Error":None,"Fitted Trend":None,
-#                                    "Centroid X Positions":None,"Centroid Y Positions":None}, index=[0])
         #
         good_ind_DF = pd.DataFrame({ "CADENCE_INDEX": [None], "Time": [None],
                                     "SAP Flux": [None], "SAP Error": [None],
@@ -15757,14 +14239,6 @@ def outlier_removal(ID,nearby_star_catalog, Sector, input_LC, default_settings,
     #
     cadence_index = cadence_index[nanmask]
     quality_flag  = quality_flag[nanmask]
-    #
-    #
-    #needs to be flexible to allow different combos of PLD, DET and SAP
-#     LC_df = pd.DataFrame({"Time":time, "SAP Flux": sap_flux, "SAP Error":sap_error, 
-#                           "Background Flux": bkg_flux, "Background Error":bkg_error, 
-#                           "PLD Flux":pld_flux,"PLD Error":pld_error,"PLD Model":pld_model,
-#                           "Detrended Flux":det_flux, "Detrended Error":det_error,"Fitted Trend":trend_lc,
-#                           "Centroid X Positions":centx,"Centroid Y Positions":centy})
     #
     #
     LC_df = pd.DataFrame({"CADENCE_INDEX": cadence_index, "Time": time,
@@ -15934,9 +14408,6 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
     # ── single-sector extras ──────────────────────────────────────────────────
     if _is_single:
         wcs             = check_wcs(hdu)
-#         y               = hdu[1].header['1CRPX4']
-#         x               = hdu[1].header['2CRPX4']
-#         reference_pixel = [x, y]
         col             = hdu[1].header["1CRPX4"]
         row             = hdu[1].header["2CRPX4"]
         reference_pixel = [col, row]
@@ -15953,10 +14424,8 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
     _add_diag  = _have_bkg or _have_jit or _have_feat
 
     # ── gridspec layout ───────────────────────────────────────────────────────    
-#     fig_width = 4 #OLD
     fig_width = 5
     gutter_col = 2   # index of the narrow spacer column
-
 
     if _add_diag:
         n_rows            = 7
@@ -15968,17 +14437,14 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
     else:
         n_rows            = 6
         fig_height_inches = 10
-        height_ratios     = None           # equal rows ≈ OLD layout (~1.67 in each)
+        height_ratios     = None           
         row_img           = slice(0, 2)
         row_sap, row_pld, row_det, row_fin = 2, 3, 4, 5
-
-#     gs1 = gridspec.GridSpec(n_rows, fig_width, height_ratios=height_ratios)
-    
-    col_widths = [1, 1, 0.15, 1, 1]   # gutter at index 2 (3rd)   # NEW
+  
+    col_widths = [1, 1, 0.15, 1, 1]   # gutter at index 2 (3rd)
     gs1 = gridspec.GridSpec(n_rows, fig_width,
                             height_ratios=height_ratios,
                             width_ratios=col_widths)
-
     
     fig = plt.figure(figsize=(12, fig_height_inches))
 
@@ -16039,23 +14505,9 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
             ncol=1,
             **kwargs,
         )
-    
-    
-
-    # ── FFI / cutout image panel ──────────────────────────────────────────────
-#     if _is_single:
-#         #ax1 = fig.add_subplot(gs1[row_img, 1:3], projection=wcs)
-#         ax1 = fig.add_subplot(gs1[row_img, 0:2], projection=wcs)
-# #         plot_cutouts(
-# #             ID, nearby_star_catalog, Sector, cadence, hdu,
-# #             pix_mask, bkg_mask, reference_pixel,
-# #             4, fig, ax1, cbarpad, default_settings,)
-#         plot_cutouts_ALT(
-#         ID, nearby_star_catalog, Sector, cadence, hdu,
-#         pix_mask, bkg_mask, reference_pixel,
-#         4, fig, ax1, cbarpad, default_settings,
-#         catalog_source=default_settings.get('plot_catalog_source', 'TIC'),
-#     )
+    #
+    #
+    #
     if _is_single:
         wcs  = check_wcs(hdu)
         ax1  = fig.add_subplot(gs1[row_img, 0:2], projection=wcs)
@@ -16082,11 +14534,7 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
 
     else:
         _sectors_for_img = Sector
-#         ax1 = plot_image(              # capture returned axis
-#             ID, nearby_star_catalog, hdu, _sectors_for_img, cadence,
-#             gs1[row_img, 1:3], fig, fs, ncols=4, cbarpad=0,
-#             default_settings=default_settings,
-#         )
+        #
         ax1 = plot_image(              # capture returned axis
             ID, nearby_star_catalog, hdu, _sectors_for_img, cadence,
             gs1[row_img, 0:2], fig, fs, ncols=4, cbarpad=0,
@@ -16195,7 +14643,6 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
         _legend_outside(ax_bkg_ts, vertical='center', framealpha=0.8)
         ax_bkg_ts.tick_params(axis='both', labelsize=fs - 8)
         ax_bkg_ts.set_yscale('log')
-        #ax_bkg_ts.set_xlabel("Time (BTJD)", fontsize=fs)
 
         # Panel B-left — quaternion feature heatmap
         if _have_feat:
@@ -16209,7 +14656,6 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
                                 interpolation='nearest', origin='upper')
             cb = fig.colorbar(im, ax=ax_feat, pad=0.01, fraction=0.04)
             cb.set_label('Norm. value (σ)', fontsize=fs,rotation=270,labelpad=15)
-#             cb.ax.set_ylabel('Norm. value (σ)', fontsize = fs,rotation=270)
             cb.ax.tick_params(labelsize=fs)
             
             for yd in [9, 18]:
@@ -16229,46 +14675,7 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
                          fontsize=fs, color='0.5', style='italic',
                          bbox=dict(boxstyle='round', fc='lightyellow', ec='0.7'))
             ax_feat.set_title('36 quaternion features [not computed]', fontsize=fs)
-
-#         # Panel B-right — jitter histogram
-#         if _have_jit:
-#             jitter_arr = np.asarray(quat_jitter, dtype=float)
-#             finite_j   = jitter_arr[np.isfinite(jitter_arr)]
-#             if len(finite_j) >= 5:
-#                 med_j    = np.median(finite_j)
-#                 mad_j    = np.median(np.abs(finite_j - med_j)) * 1.4826
-#                 thresh_j = med_j + quat_sigma_thr * mad_j
-#                 jitter_flagged = ~np.isfinite(jitter_arr) | (jitter_arr > thresh_j)
-#                 ax_jhist.hist(finite_j, bins=60, color='steelblue',
-#                               alpha=0.7, edgecolor='none', label='All cadences')
-#                 flagged_vals = jitter_arr[jitter_flagged & np.isfinite(jitter_arr)]
-#                 if len(flagged_vals):
-#                     ax_jhist.hist(flagged_vals, bins=60, color='darkorange',
-#                                   alpha=0.85, edgecolor='none',
-#                                   label=f'FLAG=1 ({len(flagged_vals)})')
-#                 ax_jhist.axvline(thresh_j, color='red', lw=1.5, ls='--',
-#                                  label=f'Threshold ({quat_sigma_thr:.1f}σ)')
-#                 ax_jhist.axvline(med_j, color='k', lw=1.0, ls=':', label='Median')
-#                 ax_jhist.set_yscale('log')
-#             else:
-#                 ax_jhist.text(0.5, 0.5, 'Insufficient jitter samples',
-#                               ha='center', va='center', transform=ax_jhist.transAxes,
-#                               fontsize=fs, color='0.5')
-#             ax_jhist.set_xlabel('Jitter scalar (raw)', fontsize=fs)
-#             ax_jhist.set_ylabel('N cadences', fontsize=fs )
-#             ax_jhist.tick_params(axis='both', labelsize=fs)
-#             #ax_jhist.legend(bbox_to_anchor=(1, 1), loc=2, borderaxespad=0.1,)
-#             _legend_outside(ax_jhist, vertical='center')
-#             ax_jhist.set_title(f'Jitter distribution \nMAD {quat_sigma_thr:.0f}σ threshold',
-#                                fontsize=fs)
-#         else:
-#             ax_jhist.axis('off')
-#             ax_jhist.text(0.5, 0.5, f'Quaternion jitter not available\n({quat_status[:70]})',
-#                           ha='center', va='center', transform=ax_jhist.transAxes,
-#                           fontsize=fs, color='0.5', style='italic',
-#                           bbox=dict(boxstyle='round', fc='lightyellow', ec='0.7'))
-#             ax_jhist.set_title('Jitter distribution — not available', fontsize=fs)
-
+        #
         # Panel B-right — jitter histogram
         if _have_jit:
             jitter_arr = np.asarray(quat_jitter, dtype=float)
@@ -16393,11 +14800,7 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
             ax_jhist.set_ylabel('N cadences', fontsize=fs)
             ax_jhist.tick_params(axis='both', labelsize=fs)
             _legend_outside(ax_jhist, vertical='center')
-#             ax_jhist.set_title(
-#                 f'Quaternion Jitter distribution (per-sector '+r'$\sigma$) ',
-#                 fontsize=fs,
-#             )
-
+    #
     # =========================================================================
     # LC PANELS ax3 – ax6  (identical for single and multi)
     # =========================================================================
@@ -16518,35 +14921,26 @@ def plot_it_all_up(ID, nearby_star_catalog, Sector, cadence, hdu,
         ax3.set_ylim(ylo, yhi)
 
     # ── ax4: PLD flux + trend ─────────────────────────────────────────────────
-    # include the trend line in the range so it is never clipped
-#     ax4_data = np.concatenate([pld_detrended[np.isfinite(pld_detrended)],
-#                                 trend_lc[np.isfinite(trend_lc)]])
-#     ylo, yhi = _ylim(ax4_data)
     ylo, yhi = _ylim(finalflux)
     if ylo is not None:
         ax4.set_ylim(ylo, yhi)
 
     # ── ax5: detrended flux (pre-outlier-removal) ─────────────────────────────
-#     ylo, yhi = _ylim(flux_detrended)
     if ylo is not None:
         ax5.set_ylim(ylo, yhi)
 
     # ── ax6: final flux (post-outlier-removal) ────────────────────────────────
-#     ylo, yhi = _ylim(finalflux)
     if ylo is not None:
         ax6.set_ylim(ylo, yhi)    
 
     # ── save ─────────────────────────────────────────────────────────────────
     _save_h = float(target_page_height) if target_page_height is not None \
               else float(fig_height_inches)
-    #gs1.update(left=0.15, right=0.85, top=0.9, bottom=0.1, wspace=0.6, hspace=0.5)
-    #gs1.update(left=0.15, right=0.7, top=0.9, bottom=0.1, wspace=3, hspace=0.5)
     gs1.update(left=0.15, right=0.7, top=0.9, bottom=0.15, wspace=0.5, hspace=0.8)
     
     gs1.tight_layout(fig, pad=1)
     fig.set_size_inches(12, _save_h)
     
-    #NEW
     for ax_ in [ax_feat, ax_jhist]:
         pos = ax_.get_position()
         ax_.set_position([pos.x0, pos.y0 + 0.01, pos.width, pos.height*0.95])
@@ -16618,286 +15012,6 @@ def generate_injection_path(Sector, default_settings):
     return Path
 #
 #
-# NEW 
-def transit_injection_OLD(input_LC, Period, T0, ID, nearby_star_catalog, Sector,
-                      default_settings,
-                      R_planet_RE=None, transit_depth=None,
-                      inclination=90, eccentricity=0, ang_periastron=90):
-    """
-    Injects a limb-darkened transit into a TESS-like light curve using the BATMAN package.
-    
-    The function either uses a specified planet radius (`R_planet_RE`), or derives it from 
-    a given transit depth (`transit_depth`). If both are provided, it will calculate the 
-    missing quantity for reference. Once the planet's parameters are established, it 
-    builds a Batman transit model and injects the synthetic transit signal into the input 
-    light curve.
-
-    Parameters
-    ----------
-    input_LC : pandas.DataFrame
-        The input light curve to be modified, containing at least the columns:
-        - 'Time' : array-like of timestamps (days)
-        - 'SAP Flux' : array-like of flux values
-        - 'SAP Error' : array-like of per-point flux uncertainties
-
-    Period : float
-        The orbital period of the injected transit (days).
-
-    T0 : float
-        The mid-transit time (BJD or similar) to place the first transit 
-        within the light curve. If T0 is earlier than the start of the 
-        light curve, this function will iteratively add `Period` until 
-        it falls within the data range.
-
-    ID : int or str
-        Identifier that matches a row in `nearby_star_catalog`. Typically, 
-        this is a TESS Input Catalog (TIC) ID or similar star ID.
-
-    nearby_star_catalog : pandas.DataFrame
-        A DataFrame containing stellar parameters for at least the 
-        specified `ID`. Must include the columns:
-        - 'rad' (stellar radius in solar radii)
-        - 'mass' (stellar mass in solar masses)
-        - 'qld_a', 'qld_b' (limb-darkening coefficients)
-        - 'ID' (the star identifier)
-
-    Sector : int
-        TESS sector number for reference or bookkeeping. Not directly used 
-        in this function, but kept for logging or metadata.
-
-    R_planet_RE : float or None, optional
-        Planet radius in Earth radii. If None, the function uses 
-        `transit_depth` to derive `R_planet_RE`. One of `R_planet_RE` or 
-        `transit_depth` must be provided.
-
-    transit_depth : float or None, optional
-        Transit depth in fractional units (e.g., 0.0001 for 100 ppm). Used 
-        to estimate planet radius if `R_planet_RE` is not given. If 
-        `R_planet_RE` is provided, we also store this depth for reference.
-
-    verbose : bool, optional
-        If True, prints additional information during execution. Defaults 
-        to False.
-
-    inclination : float, optional
-        Orbital inclination in degrees (default is 90° = edge-on).
-
-    eccentricity : float, optional
-        Eccentricity of the orbit. Default is 0 (circular orbit).
-
-    ang_periastron : float, optional
-        Argument of periastron in degrees. Default is 90.
-
-    Returns
-    -------
-    inj_LC : pandas.DataFrame
-        A copy of the input light curve with the injected transit. Columns:
-        - 'Time' : timestamps identical to the input
-        - 'SAP Flux' : flux values with the synthetic transit added
-        - 'SAP Error' : same as the input uncertainties
-        - 'Injected Model' : the synthetic transit model
-
-    inj_params : pandas.DataFrame
-        A single-row DataFrame containing the injected transit parameters:
-        - 'Period' : orbital period used (days)
-        - 'T0' : mid-transit time that falls within the data range
-        - 'Planet Radius [RS]' : planet radius in stellar radii
-        - 'Injected Radius' : planet radius in Earth radii
-        - 'Injected Depth' : fractional transit depth
-        - 'SMA [RS]' : semi-major axis in stellar radii
-
-    Raises
-    ------
-    ValueError
-        If neither `R_planet_RE` nor `transit_depth` is provided.
-
-    Notes
-    -----
-    - The function automatically computes an appropriate supersampling 
-      factor for BATMAN based on the median time resolution of the input 
-      light curve.
-    - If `T0` is before the start of the light curve, the function 
-      increments it by `Period` until it overlaps with the data range.
-    - Limb-darkening coefficients are taken from `qld_a` and `qld_b` 
-      columns in the `nearby_star_catalog`.
-    
-    Example
-    -------
-    >>> # Suppose you have a TESS-like DataFrame called df_lc
-    >>> # with columns ['Time', 'SAP Flux', 'SAP Error'].
-    >>> # Also have a star catalog 'df_star' with the necessary columns,
-    >>> # and a known star ID = 123456.
-    >>> 
-    >>> injected_lc, inj_params = transit_injection(
-    ...     input_LC=df_lc,
-    ...     Period=3.0,
-    ...     T0=1337.5,
-    ...     ID=123456,
-    ...     nearby_star_catalog=df_star,
-    ...     Sector=3,
-    ...     R_planet_RE=2.0,
-    ...     verbose=True
-    ... )
-    >>> print(inj_params)
-    """
-    # get function settings
-    verbose=default_settings.get('verbose')
-    inject_param_P_RP_T0=default_settings.get('inject_param_P_RP_T0')
-    Period_default, R_planet_RE_default, T0_default = inject_param_P_RP_T0
-    #
-#     if verbose:
-#         print(f'transit_injection check: P {Period,Period_default} ; RP {R_planet_RE_default,R_planet_RE_default} ; T0 {T0,T0_default}')
-    #
-    #
-    import numpy as np
-    import pandas as pd
-    import batman
-    from astropy import units as u
-
-    T = input_LC['Time'].to_numpy(dtype=np.float64)
-    F = input_LC['SAP Flux'].to_numpy(dtype=np.float64)
-    E = input_LC['SAP Error'].to_numpy(dtype=np.float64)
-    texp = np.nanmedian(np.diff(T))
-
-    # Get stellar params
-    star = nearby_star_catalog.loc[nearby_star_catalog['ID'] == str(ID)].reset_index(drop=True)
-    star = get_qld(star, verbose)
-    qld_a = star['qld_a'].item()
-    qld_b = star['qld_b'].item()
-    R_star = star['rad'].item()  # in R_sun
-    M_star = star['mass'].item()  # in M_sun
-
-    # Convert constants
-    RS = u.R_sun.to(u.cm)
-    RE = u.R_earth.to(u.cm)
-    
-    
-    def expected_transit_depth(RP_RE, R_star_Rsun):
-        """
-        Compute the expected transit depth for a given planet radius and stellar radius.
-
-        Parameters:
-        -----------
-        RP_RE : float
-            Planet radius in Earth radii.
-        R_star_Rsun : float
-            Stellar radius in solar radii.
-
-        Returns:
-        --------
-        depth : float
-            Transit depth in fractional units (e.g., 0.0001 for 100 ppm).
-        """
-        RE = u.R_earth.to(u.cm)
-        RS = u.R_sun.to(u.cm)
-
-        Rplanet = RP_RE * RE
-        Rstar = R_star_Rsun * RS
-
-        depth = (Rplanet / Rstar) ** 2
-        return depth
-
-
-    def planet_radius_from_depth(depth, R_star_Rsun):
-        """
-        Calculate the planet radius in Earth radii given a transit depth and stellar radius.
-
-        Parameters:
-        -----------
-        depth : float
-            Transit depth (fractional, e.g., 0.0001 for 100 ppm).
-        R_star_Rsun : float
-            Stellar radius in solar radii.
-
-        Returns:
-        --------
-        R_planet_RE : float
-            Planet radius in Earth radii.
-        """
-        RS = u.R_sun.to(u.cm)
-        RE = u.R_earth.to(u.cm)
-
-        R_star_cm = R_star_Rsun * RS
-        R_planet_cm = R_star_cm * np.sqrt(depth)
-        R_planet_RE = R_planet_cm / RE
-
-        return R_planet_RE
-    
-
-    # Compute planet radius if only transit depth is provided
-    if R_planet_RE is None and transit_depth is not None:
-        R_planet_RE = planet_radius_from_depth(depth=transit_depth, R_star_Rsun=R_star)
-        if verbose:
-            print(f"Derived planet radius: {R_planet_RE:.3f} R_earth from depth {transit_depth:.1e}")
-    elif R_planet_RE is None:
-        raise ValueError("Either R_planet_RE or transit_depth must be provided.")
-        
-    if R_planet_RE is not None and transit_depth is None:
-        transit_depth = expected_transit_depth(RP_RE=R_planet_RE,R_star_Rsun=R_star)
-
-    # Adjust T0 if it's earlier than light curve
-    # these lines can cause offsets of transit timing
-#     time_start = T0
-#     N = 0
-#     while time_start < np.nanmin(T):
-#         N += 1
-#         time_start = T0 + N * Period
-    # these lines can cause offsets of transit timing
-    
-    # use this instead so 1st transit is always within 1st orbit
-    time_start = T0 + np.ceil((np.nanmin(T) - T0) / Period) * Period
-
-
-    # Calculate semi-major axis in stellar radii
-    SMA, SMA_cm = calculate_semi_major_axis(Period=Period * u.day,
-                                            R_star=R_star * u.R_sun,
-                                            M_star=M_star * u.M_sun)
-
-    # Set up batman transit model
-    ma = batman.TransitParams()
-    ma.t0 = time_start
-    ma.per = Period
-    ma.rp = (R_planet_RE * RE) / (R_star * RS)
-#     if verbose:
-#         print('batmap rp_rs:',ma.rp)
-    ma.a = SMA
-    ma.inc = inclination
-    ma.ecc = eccentricity
-    ma.w = ang_periastron
-    ma.u = [qld_a, qld_b]
-    ma.limb_dark = "quadratic"
-
-    # Determine supersampling
-    import astropy.units as units
-    #If your cadence are longer than 10 min, you pick ssf = 20;  ssf = 10.
-    ssf = 20 if (texp * units.day).to(units.minute).value > 10 else 10
-
-    m = batman.TransitModel(ma, T, supersample_factor=ssf, exp_time=texp)
-    synthetic_signal = m.light_curve(ma)
-    
-    # assumes flux is normalized
-    #injectedflux = F + synthetic_signal - 1
-    # transit is a 1 out of transit, depth (% change) in transit value.
-    # multiplying by F (normalized or not) should yield the right transit depth
-    injectedflux = F * synthetic_signal
-    #print('injectedflux = F * synthetic_signal')
-
-    inj_LC = pd.DataFrame({
-        'Time': T,
-        'SAP Flux': injectedflux,
-        'SAP Error': E,
-        'Injected Model': synthetic_signal})
-    
-    Ndigits=32
-    inj_params = pd.DataFrame({
-        'Period': np.round(ma.per,Ndigits),
-        'T0': np.round(ma.t0,Ndigits),
-        'Planet Radius [RS]': np.round(ma.rp,Ndigits),
-        'Injected Radius': np.round(R_planet_RE,Ndigits),
-        'Injected Depth': np.round(transit_depth,Ndigits),
-        'SMA [RS]': np.round(ma.a,Ndigits) }, index=[0])
-
-    return inj_LC, inj_params
 #
 def transit_injection(input_LC, Period, T0, ID, nearby_star_catalog, Sector,
                       default_settings,
@@ -17146,7 +15260,7 @@ def transit_injection(input_LC, Period, T0, ID, nearby_star_catalog, Sector,
 #
 #
 #
-# NEW FOR SCRAMBLE TEST
+# FOR SCRAMBLE TEST
 def scramble_hdu_orbits(
     hdu,
     Sector: int,
@@ -17273,7 +15387,6 @@ def scramble_hdu_orbits(
         n_nan = n_total - n_valid
         print(f"  Result: {n_valid} valid frames, {n_nan} NaN-filled")
         print(f"  ===== Scrambling Complete =====\n")
-# NEW FOR SCRAMBLE TEST
 #
 # stream line LC production fron image headers
 #
@@ -17546,10 +15659,6 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
         print('\n Step 2: SAP + background/centroid/quaternion quality flagging \n')
 
     try:
-#         _sap_result = SAP(ID, nearby_star_catalog,
-#                           Sector, cadence, hdu,
-#                           quality_mask, reference_pixel,
-#                           default_settings)
         _sap_result = SAP_ALT5(ID, nearby_star_catalog, Sector, cadence, hdu, 
                                quality_mask, reference_pixel, default_settings)
 
@@ -17562,8 +15671,6 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
          quat_jitter, quat_status, qlp_result) = _unpack_sap(_sap_result)
 
         # populate diagnostic dict immediately after first successful SAP call
-#         sap_diag = _make_sap_diag(quality_flag, bkg_level_per_pix, bkg_trend,
-#                                    bkg_residuals, quat_jitter, quat_status, qlp_result)
         sap_diag = _make_sap_diag(
             quality_flag, bkg_level_per_pix, bkg_trend,
             bkg_residuals, quat_jitter, quat_status, qlp_result,
@@ -17608,8 +15715,6 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
              bkg_level_per_pix, bkg_trend, bkg_residuals,
              quat_jitter, quat_status, qlp_result) = _unpack_sap(_sap_result2)
             # refresh sap_diag after retry
-#             sap_diag = _make_sap_diag(quality_flag, bkg_level_per_pix, bkg_trend,
-#                                        bkg_residuals, quat_jitter, quat_status, qlp_result)
             sap_diag = _make_sap_diag(
                 quality_flag, bkg_level_per_pix, bkg_trend,
                 bkg_residuals, quat_jitter, quat_status, qlp_result,
@@ -17717,19 +15822,7 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
     start = clock.time()
     if verbose:
         print('Step 5: Applying smoothing filter\n')
-
-#     input_LC2 = pd.DataFrame({
-#         'Time':                  PLD_LC['Time'].to_numpy(dtype=np.float64),
-#         'Flux':                  PLD_LC['PLD Flux'].to_numpy(dtype=np.float64),
-#         'Error':                 PLD_LC['PLD Error'].to_numpy(dtype=np.float64),
-#         'Model':                 PLD_LC['PLD Model'].to_numpy(dtype=np.float64),
-#         'SAP Flux':              PLD_LC['SAP Flux'].to_numpy(dtype=np.float64),
-#         'SAP Error':             PLD_LC['SAP Error'].to_numpy(dtype=np.float64),
-#         'Background Flux':       PLD_LC['Background Flux'].to_numpy(dtype=np.float64),
-#         'Background Error':      PLD_LC['Background Error'].to_numpy(dtype=np.float64),
-#         'Centroid X Positions':  PLD_LC['Centroid X Positions'].to_numpy(dtype=np.float64),
-#         'Centroid Y Positions':  PLD_LC['Centroid Y Positions'].to_numpy(dtype=np.float64),
-#     })
+    #
     #
     input_LC2 = pd.DataFrame({
         'CADENCE_INDEX':         PLD_LC['CADENCE_INDEX'].to_numpy(dtype=int),
@@ -17766,22 +15859,7 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
     if verbose:
         print('Step 6: Applying Outlier Removal\n')
         df_len_check(Det_LC, message='len check for step 6: ')
-
-#     input_LC3 = pd.DataFrame({
-#         'Time':                  Det_LC['Time'].to_numpy(dtype=np.float64),
-#         'SAP Flux':              Det_LC['SAP Flux'].to_numpy(dtype=np.float64),
-#         'SAP Error':             Det_LC['SAP Error'].to_numpy(dtype=np.float64),
-#         'Background Flux':       Det_LC['Background Flux'].to_numpy(dtype=np.float64),
-#         'Background Error':      Det_LC['Background Error'].to_numpy(dtype=np.float64),
-#         'Detrended Flux':        Det_LC['Detrended Flux'].to_numpy(dtype=np.float64),
-#         'Detrended Error':       Det_LC['Detrended Error'].to_numpy(dtype=np.float64),
-#         'Fitted Trend':          Det_LC['Fitted Trend'].to_numpy(dtype=np.float64),
-#         'PLD Flux':              Det_LC['PLD Flux'].to_numpy(dtype=np.float64),
-#         'PLD Error':             Det_LC['PLD Error'].to_numpy(dtype=np.float64),
-#         'PLD Model':             Det_LC['PLD Model'].to_numpy(dtype=np.float64),
-#         'Centroid X Positions':  Det_LC['Centroid X Positions'].to_numpy(dtype=np.float64),
-#         'Centroid Y Positions':  Det_LC['Centroid Y Positions'].to_numpy(dtype=np.float64),
-#     })
+    #
     #
     input_LC3 = pd.DataFrame({
     'CADENCE_INDEX':         Det_LC['CADENCE_INDEX'].to_numpy(dtype=int),
@@ -17805,8 +15883,7 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
         ID=ID, nearby_star_catalog=nearby_star_catalog,
         Sector=Sector, input_LC=input_LC3,
         default_settings=default_settings,
-    )
-    
+    )    
     #
     # ---------------------------------------------------------------------
     # Rebuild full-length versions for saving/plotting.
@@ -17894,23 +15971,11 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
     good_ind_DF = _decorate_quality_columns(good_ind_DF)
     bad_ind_DF  = _decorate_quality_columns(bad_ind_DF)
     LC_df       = _decorate_quality_columns(LC_df)    
-    
-    
+    #    
     #
     # ── Save intermediate products ────────────────────────────────────────────
-#     RAWLC_df.to_csv(
-#         savelcpath + f"TIC_{ID}_{sector_tag}_RAW_LC.csv", index=False)
-#     clippedRAWLC_df.to_csv(
-#         savelcpath + f"TIC_{ID}_{sector_tag}_RAW_LC_systematics_removed.csv",
-#         index=False)
-#     preclipLC_df.to_csv(
-#         savelcpath + f"TIC_{ID}_{sector_tag}_final_LC_preclipped.csv",
-#         index=False)
-#     bad_ind_DF.to_csv(
-#         savelcpath + f"TIC_{ID}_{sector_tag}_bad_outliers.csv", index=False)
-#     good_ind_DF.to_csv(
-#         savelcpath + f"TIC_{ID}_{sector_tag}_good_outliers.csv", index=False)
-    
+    #
+    #
     RAWLC_df_full.to_csv(
         savelcpath + f"TIC_{ID}_{sector_tag}_RAW_LC.csv", index=False)
 
@@ -17939,28 +16004,6 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
     start = clock.time()
     if verbose:
         print('Step 7: Plotting and Saving FFI and selected apertures\n')
-
-#     plot_it_all_up(
-#         ID=ID, nearby_star_catalog=nearby_star_catalog,
-#         Sector=Sector, cadence=cadence,
-#         hdu=hdu, median_image=median_image,
-#         pix_mask=pix_mask, bkg_mask=bkg_mask,
-#         RAWLC_df=RAWLC_df, clippedRAWLC_df=clippedRAWLC_df,
-#         LC_df=LC_df, good_ind_DF=good_ind_DF,
-#         bad_ind_DF=bad_ind_DF, preclipLC_df=preclipLC_df,
-#         magnitude_limit=18, dot_scale=20, cbarpad=0.01,
-#         default_settings=default_settings,
-#         # forward SAP diagnostics to single-sector summary figure
-#         bkg_level_per_pix = sap_diag.get('bkg_level_per_pix'),
-#         bkg_trend         = sap_diag.get('bkg_trend'),
-#         bkg_residuals     = sap_diag.get('bkg_residuals'),
-#         quat_jitter       = sap_diag.get('quat_jitter'),
-#         quat_status       = sap_diag.get('quat_status', 'not provided'),
-#         qlp_result        = sap_diag.get('qlp_result'),
-#         quality_flag      = sap_diag.get('quality_flag'),
-#     )
-    
-    
     plot_it_all_up(
         ID=ID, nearby_star_catalog=nearby_star_catalog,
         Sector=Sector, cadence=cadence,
@@ -17986,663 +16029,6 @@ def get_LC_from_FFI(ID, nearby_star_catalog, Sector, cadence,
         df_len_check(LC_df, message='FINAL LENGTHs: ')
 
     return LC_df_full, sap_diag
-#
-#
-#
-def LC_creation_OLD(ID, nearby_star_catalog, cadence, Sector, default_settings, **kwargs):
-    """
-    Produce processed TESS light curves for one or more sectors using the
-    NEMESIS pipeline (Feliz et al. 2021, https://arxiv.org/abs/2103.05647).
-
-    For each sector, calls ``gethdu`` → ``get_LC_from_FFI`` in sequence.
-    Multi-sector results are concatenated and saved as ``Multi_Sector_*``
-    CSV files.  SAP diagnostic arrays from all sectors are aggregated into a
-    single ``sap_diag`` dict for downstream forwarding to vetting reports.
-
-    Parameters
-    ----------
-    ID : int
-        TIC identifier.
-    nearby_star_catalog : pd.DataFrame
-        Stellar parameters for the target and nearby stars, as returned by
-        ``collect_nearby_TIC_params``.  Must include columns ``ID``,
-        ``rad``, ``mass``, ``Teff``, ``logg``, ``Tmag``, ``qld_a``,
-        ``qld_b``.
-    cadence : str
-        TESS exposure cadence: ``'30 minute'``, ``'10 minute'``,
-        ``'2 minute'``, ``'20 second'``, or legacy aliases.
-    Sector : int, list of int, or None
-        Sector(s) to process.  ``None`` with ``get_all_sectors=True``
-        auto-discovers all available sectors.
-    default_settings : dict
-        NEMESIS settings dictionary, typically from ``default_NEMESIS_pipeline_settings``
-        and already updated by ``Make_dirs`` (paths must be populated).
-        Relevant keys: ``get_all_sectors``, ``for_injections``,
-        ``inject_param_P_RP_T0``, ``verbose``, ``savelcpath``, ``base_path``.
-    **kwargs
-        Forwarded to ``get_LC_from_FFI`` for per-call overrides.
-
-    Returns
-    -------
-    hdu : fits.HDUList or list of fits.HDUList or None
-        Raw FITS data from the last successfully processed sector, or a list
-        for multi-sector runs.  ``None`` on failure.
-    LC_df : pd.DataFrame or None
-        Final concatenated light curve across all sectors.  Columns:
-        ``Time``, ``SAP Flux``, ``SAP Error``, ``PLD Flux``, ``PLD Error``,
-        ``PLD Model``, ``Detrended Flux``, ``Detrended Error``,
-        ``Fitted Trend``, ``Background Flux``, ``Background Error``,
-        ``Centroid X Positions``, ``Centroid Y Positions``.
-        ``None`` on failure.
-    sap_diag : dict
-        Aggregated SAP diagnostic arrays across all processed sectors.
-        Keys: ``quality_flag``, ``bkg_level_per_pix``, ``bkg_trend``,
-        ``bkg_residuals``, ``quat_jitter``, ``quat_status``, ``qlp_result``.
-        Empty dict ``{}`` on failure or if no diagnostics were produced.
-
-    Notes
-    -----
-    On any unrecoverable failure (e.g., all sectors on detector edge,
-    insufficient photon counts), returns ``(None, None, {})``.
-
-    Saved outputs (per sector)
-    --------------------------
-    ``TIC_{ID}_Sector_{NNNN}_RAW_LC.csv``
-    ``TIC_{ID}_Sector_{NNNN}_RAW_LC_systematics_removed.csv``
-    ``TIC_{ID}_Sector_{NNNN}_final_LC_preclipped.csv``
-    ``TIC_{ID}_Sector_{NNNN}_bad_outliers.csv``
-    ``TIC_{ID}_Sector_{NNNN}_good_outliers.csv``
-    ``TIC_{ID}_Sector_{NNNN}_final_LC.csv``
-    Multi-sector runs additionally produce ``TIC_{ID}_Multi_Sector_*`` versions.
-    """
-    import sys
-    import time as clock
-    import pandas as pd
-    import requests
-
-    start = clock.time()
-
-    # ── settings ──────────────────────────────────────────────────────────────
-    verbose             = default_settings.get('verbose')
-    get_all_sectors     = default_settings.get('get_all_sectors')
-    for_injections      = default_settings.get('for_injections')
-    inject_param_P_RP_T0= default_settings.get('inject_param_P_RP_T0')
-    base_path           = default_settings.get('base_path')
-
-    if get_all_sectors or Sector is None or not isinstance(Sector, int):
-        sector_tag = 'Multi_Sector'
-    else:
-        sector_tag = f'Sector_{Sector:04d}'
-
-    # ── resolve TIC ID ────────────────────────────────────────────────────────
-    if not isinstance(ID, int):
-        ID = get_TIC_ID(ID, verbose)
-
-    # ── stellar parameters ────────────────────────────────────────────────────
-    star = nearby_star_catalog.loc[
-        nearby_star_catalog['ID'] == str(ID)
-    ].reset_index(drop=True)
-    star = get_qld(star, verbose)
-
-    if star is None or len(star) == 0:
-        star, nearby_star_catalog = collect_nearby_TIC_params(
-            ID, N_TESS_pixels=2, downloadpath=None)
-
-    R_star = star['rad'].item()
-    M_star = star['mass'].item()
-
-    if not (np.isfinite(R_star) and np.isfinite(M_star)):
-        print(f'TIC {ID} has no known Stellar Mass or Radius in TIC.\n'
-              'Using Mass-Radius Relation.')
-        M_star, R_star = mass_radius_mdwarf_relation(M_star, R_star)
-        if not (np.isfinite(R_star) and np.isfinite(M_star)):
-            print(f'TIC {ID}: Mass-Radius relation also failed. '
-                  'Cancelling NEMESIS LC production.')
-            return None, None, {}
-        if verbose:
-            print(f'new M_star={M_star:.3f}, R_star={R_star:.3f}')
-        star['e_mass'] = M_star * 0.10
-        star['e_rad']  = R_star * 0.10
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Helper: aggregate a list of per-sector sap_diag dicts into one.
-    # ─────────────────────────────────────────────────────────────────────────
-    def _aggregate_sap_diags(diag_list):
-        """
-        Concatenate array-valued diagnostics; merge feature_dfs across sectors;
-        keep last non-None scalar for quat_status / qlp_result structure.
-        """
-        if not diag_list:
-            return {}
-
-        array_keys  = ['quality_flag', 'bkg_level_per_pix',
-                        'bkg_trend', 'bkg_residuals', 'quat_jitter']
-        scalar_keys = ['quat_status', 'qlp_result']
-
-        agg = {}
-
-        # ── array keys: concatenate ───────────────────────────────────────────
-        for k in array_keys:
-            arrays = [d[k] for d in diag_list if d.get(k) is not None]
-            if arrays:
-                try:
-                    agg[k] = np.concatenate([np.atleast_1d(a) for a in arrays])
-                except Exception:
-                    agg[k] = arrays[-1]
-            else:
-                agg[k] = None
-
-        # ── scalar keys: keep last non-None ───────────────────────────────────
-        for k in scalar_keys:
-            vals = [d[k] for d in diag_list if d.get(k) is not None]
-            agg[k] = vals[-1] if vals else None
-
-        # ── special handling: concatenate feature_dfs across sectors ──────────
-        # Each qlp_result dict (one per sector) contains a 'feature_df' with a
-        # 'time' column.  Concatenating them gives a single continuous DataFrame
-        # that the heatmap imshow can display over the full time baseline.
-        feat_dfs = []
-        feat_cols_ref = None
-        for d in diag_list:
-            qr = d.get('qlp_result')
-            if qr is not None and isinstance(qr, dict):
-                fdf = qr.get('feature_df')
-                if fdf is not None:
-                    feat_dfs.append(fdf)
-                    if feat_cols_ref is None:
-                        feat_cols_ref = qr.get('feature_cols')
-
-        if feat_dfs:
-            try:
-                combined_feat_df = pd.concat(feat_dfs, ignore_index=True
-                                             ).sort_values('time'
-                                             ).reset_index(drop=True)
-                # patch the aggregated qlp_result so the heatmap sees all sectors
-                if agg['qlp_result'] is None:
-                    agg['qlp_result'] = {}
-                agg['qlp_result'] = dict(agg['qlp_result'])   # shallow copy
-                agg['qlp_result']['feature_df']   = combined_feat_df
-                agg['qlp_result']['feature_cols'] = feat_cols_ref
-                # rebuild combined jitter_mask from the concatenated jitter array
-                if agg.get('quat_jitter') is not None:
-                    jitter_arr = np.asarray(agg['quat_jitter'], dtype=float)
-                    finite_j   = jitter_arr[np.isfinite(jitter_arr)]
-                    if len(finite_j) >= 5:
-                        med_j = np.median(finite_j)
-                        mad_j = np.median(np.abs(finite_j - med_j)) * 1.4826
-                        # default sigma threshold; plot functions re-derive anyway
-                        agg['qlp_result']['jitter_mask'] = (
-                            ~np.isfinite(jitter_arr) |
-                            (jitter_arr > med_j + 5.0 * mad_j)
-                        )
-            except Exception:
-                pass   # non-fatal; heatmap falls back to last-sector df
-
-        return agg
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Helper: produce and collect the LC + diagnostics for ONE sector.
-    # ─────────────────────────────────────────────────────────────────────────
-    _locked_ap_settings: dict = {}   # populated after sector 0 when opt=True; NEW
-    def _process_one_sector(Sector_, hdu_, CCD_, Camera_,
-                            quality_mask_, reference_pixel_):
-        """
-        Run get_LC_from_FFI for a single sector.
-        Returns a bundle dict (including 'sap_diag'), or None if no LC.
-
-        Identity checks (added 10-03-2026). gethdu_lksearch has already
-        verified the cutout's sector and position before this point.
-        1. The cutout header is the requested sector (cheap repeat).
-        2. The light curve's times are this cutout's times.
-        3. The final_LC.csv on disk holds the same times.
-        4. TESS_Sector_observation_check places the light curve's first and
-           last times in the requested sector.
-        If 2 to 4 fail, the extraction is rerun once from the same verified
-        cutout. If they fail again, final_LC.csv is renamed to
-        final_LC.IDENTITY_FAIL.csv, which collect_data_2026.py does not
-        match, and None is returned.
-        """
-        if hdu_ is None:
-            if verbose:
-                print(f'Sector {Sector_}: HDU is None, skipping.')
-            return None
-
-        # identity check 1: the cutout is the requested sector
-        _ident = verify_cutout_identity(hdu_[0].header, Sector_)
-        if not _ident["ok"]:
-            print(f"[identity] TIC {ID} S{Sector_}: cutout rejected: "
-                  f"{'; '.join(_ident['reasons'])}")
-            return None
-
-        _stag = f'Sector_{Sector_:04d}'
-        print(f'\nTIC {ID}  Sector {Sector_}')
-        print(f'  CCD={CCD_}  Camera={Camera_}  hdu type={type(hdu_).__name__}')
-        
-        #diagnostic reference pixel check
-        print_reference_pixel_diagnostic(
-        ID=ID,
-        hdu=hdu_,
-        reference_pixel=reference_pixel_,
-        nearby_star_catalog=nearby_star_catalog,
-        Sector=Sector_,)
-        #diagnostic reference pixel check     
-
-        _cut_t = hdu_[1].data['TIME']
-        _ok = False
-        for _try in (1, 2):
-            # --- core call: now returns (LC_df, sap_diag) ---
-            LC, sec_sap_diag = get_LC_from_FFI(
-                ID, nearby_star_catalog, Sector_, cadence,
-                hdu_, CCD_, Camera_, reference_pixel_, default_settings
-            )
-            slcp = default_settings.get('savelcpath')
-            if LC is None:
-                if _try == 1:
-                    return None
-                break
-
-            # identity checks 2 to 4
-            _final = slcp + f'TIC_{ID}_{_stag}_final_LC.csv'
-            _lc_t = np.asarray(LC['Time'], dtype=float)
-            _c2 = verify_lc_matches_cutout(_lc_t, _cut_t)
-            _c3 = verify_written_lc(_final, _lc_t)
-            _c4 = verify_lc_sector_by_time(_lc_t, Sector_)
-            if verbose:
-                for _n in _c3["notes"] + _c4["notes"]:
-                    print(f"[identity] TIC {ID} S{Sector_}: note: {_n}")
-            _bad = _c2["reasons"] + _c3["reasons"] + _c4["reasons"]
-            if not _bad:
-                _ok = True
-                break
-            print(f"[identity] TIC {ID} S{Sector_}: light curve check failed "
-                  f"(try {_try}/2, matched {_c2['n_matched']}/{_c2['n_lc']}): "
-                  f"{'; '.join(_bad)}")
-
-        if not _ok:
-            if os.path.isfile(_final):
-                _q = _final[:-len('.csv')] + '.IDENTITY_FAIL.csv'
-                os.replace(_final, _q)
-                print(f"[identity] TIC {ID} S{Sector_}: renamed {_final} "
-                      f"to {_q}; sector dropped")
-            return None
-
-        bundle = dict(
-            LC          = LC,
-            sap_diag    = sec_sap_diag,           # NEW
-            Raw         = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_RAW_LC.csv'),
-            Preclip     = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_final_LC_preclipped.csv'),
-            Rawclip     = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_RAW_LC_systematics_removed.csv'),
-            bad_ind     = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_bad_outliers.csv'),
-            good_ind    = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_good_outliers.csv'),
-        )
-
-        if for_injections:
-            try:
-                bundle['inj_LC'] = pd.read_csv(
-                    slcp + f'TIC_{ID}_{_stag}_TransitInjected_RAWLC.csv')
-                bundle['inj_param'] = pd.read_csv(
-                    slcp + f'TIC_{ID}_{_stag}_TransitInjected_param.csv')
-            except FileNotFoundError:
-                pass
-
-        return bundle
-
-    def _process_one_sector_OLD(Sector_, hdu_, CCD_, Camera_,
-                            quality_mask_, reference_pixel_):
-        """
-        Run get_LC_from_FFI for a single sector.
-        Returns a bundle dict (including 'sap_diag'), or None if no LC.
-        """
-        nonlocal _locked_ap_settings   # NEW
-        
-        if hdu_ is None:
-            if verbose:
-                print(f'Sector {Sector_}: HDU is None — skipping.')
-            return None
-
-        _stag = f'Sector_{Sector_:04d}'
-        print(f'\nTIC {ID}  Sector {Sector_}')
-        print(f'  CCD={CCD_}  Camera={Camera_}  hdu type={type(hdu_).__name__}')
-        
-        # ── NEW: aperture locking -- build sector-local settings copy ─────────
-        # Fires on sectors N+ when optimization was enabled and 1st sector 
-        # produced a valid winner. 1st Sector always runs with original settings.
-        _sec_settings = default_settings   # pass-through for 1st sector / opt=False
-
-        if _locked_ap_settings:
-            _sec_settings = default_settings.copy()
-            _sec_settings.update(_locked_ap_settings)
-            if verbose:
-                _m  = _locked_ap_settings.get('aperture_method', '?')
-                _p  = _locked_ap_settings.get('aperture_method_param')
-                _ps = f'{_p:.2f}' if _p is not None else 'fallback'
-                print(f'  [aperture lock] method={_m}  param={_ps}  '
-                      f'(locked from 1st sector)')
-        # ── END NEW ──────────────────────────────────────────────────────────
-        
-
-        # --- core call: now returns (LC_df, sap_diag) ---
-        LC, sec_sap_diag = get_LC_from_FFI(
-            ID, nearby_star_catalog, Sector_, cadence,
-            hdu_, CCD_, Camera_, reference_pixel_, 
-#             default_settings,
-            _sec_settings, #NOTE _sec_settings
-        )
-        slcp = default_settings.get('savelcpath')
-
-        if LC is None:
-            return None
-        
-        # ── NEW: record 1st-sector winner for subsequent sectors ────────────────
-        # Fires exactly once (when _locked_ap_settings is still empty) and
-        # only when the caller requested optimization.
-        if (not _locked_ap_settings
-                and default_settings.get('do_aperture_optimization', False)):
-            _winner_method = sec_sap_diag.get('aperture_method', None)
-            _winner_param  = sec_sap_diag.get('aperture_method_param', None)
-            if _winner_method is not None:
-                _locked_ap_settings = {
-                    'do_aperture_optimization': False,
-                    'aperture_method':          _winner_method,
-                    'aperture_method_param':    _winner_param,
-                }
-                if verbose:
-                    _ps = f'{_winner_param:.2f}' if _winner_param is not None else 'fallback'
-                    print(f'  [aperture lock] 1st-sector winner locked: '
-                          f'method={_winner_method}  param={_ps}')
-            else:
-                if verbose:
-                    print('  [aperture lock] WARNING: aperture_method missing '
-                          'from 1st-sector sap_diag; no lock applied.')
-        # ── END NEW ──────────────────────────────────────────────────────────
-
-        bundle = dict(
-            LC          = LC,
-            sap_diag    = sec_sap_diag,           # NEW
-            Raw         = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_RAW_LC.csv'),
-            Preclip     = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_final_LC_preclipped.csv'),
-            Rawclip     = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_RAW_LC_systematics_removed.csv'),
-            bad_ind     = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_bad_outliers.csv'),
-            good_ind    = pd.read_csv(slcp + f'TIC_{ID}_{_stag}_good_outliers.csv'),
-        )
-
-        if for_injections:
-            try:
-                bundle['inj_LC'] = pd.read_csv(
-                    slcp + f'TIC_{ID}_{_stag}_TransitInjected_RAWLC.csv')
-                bundle['inj_param'] = pd.read_csv(
-                    slcp + f'TIC_{ID}_{_stag}_TransitInjected_param.csv')
-            except FileNotFoundError:
-                pass
-
-        return bundle
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Helper: concatenate a list of per-sector bundles into final DFs.
-    # ─────────────────────────────────────────────────────────────────────────
-    def _concat_bundles(bundles, hdus_list):
-        LC_df         = pd.concat([b['LC']       for b in bundles], ignore_index=True)
-        Raw_LC_df     = pd.concat([b['Raw']      for b in bundles], ignore_index=True)
-        Rawclip_LC_df = pd.concat([b['Rawclip']  for b in bundles], ignore_index=True)
-        Preclip_LC_df = pd.concat([b['Preclip']  for b in bundles], ignore_index=True)
-        good_ind_df   = pd.concat([b['good_ind'] for b in bundles], ignore_index=True)
-        bad_ind_df    = pd.concat([b['bad_ind']  for b in bundles], ignore_index=True)
-
-        # aggregate SAP diagnostics across all sectors
-        agg_sap_diag = _aggregate_sap_diags([b.get('sap_diag', {}) for b in bundles])
-
-        inj_LCs    = None
-        inj_params = None
-        if for_injections:
-            inj_list = [b['inj_LC']    for b in bundles if 'inj_LC'    in b]
-            par_list = [b['inj_param'] for b in bundles if 'inj_param' in b]
-            if inj_list:
-                inj_LCs    = pd.concat(inj_list,  ignore_index=True)
-                inj_params = pd.concat(par_list,  ignore_index=True)
-
-        return (LC_df, Raw_LC_df, Rawclip_LC_df, Preclip_LC_df,
-                good_ind_df, bad_ind_df, inj_LCs, inj_params,
-                hdus_list, agg_sap_diag)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # BRANCH A: get_all_sectors == True  OR  Sector == None
-    # ─────────────────────────────────────────────────────────────────────────
-    if get_all_sectors or (Sector is None):
-        print(f'TIC {ID} ; Getting All available NEMESIS Light Curves')
-
-        if verbose:
-            print('Step 0: Making Directories\n')
-        Make_dirs(Sector, cadence, default_settings, return_paths=False)
-
-        if verbose:
-            cad_label = 'FFIs' if cadence in ('long', '30 minute', '10 minute') else 'TPFs'
-            print(f'Step 1: Obtaining HDUs from {cad_label}\n')
-
-        hdus_raw, CCDs_raw, Cameras_raw, qms_raw, rps_raw = gethdu(
-            star, ID, Sector, cadence, default_settings)
-
-        hdus, CCDs, Cameras, quality_masks, reference_pixels = (
-            _normalize_gethdu_outputs(
-                hdus_raw, CCDs_raw, Cameras_raw, qms_raw, rps_raw))
-
-        if not any(h is not None for h in hdus):
-            _ensure_hdu_or_raise(None, ID, Sector, cadence)
-            return None, None, {}
-
-        bundles    = []
-        valid_hdus = []
-
-        for S in range(len(hdus)):
-            if hdus[S] is None:
-                continue
-            try:
-                Sector_ = int(hdus[S][0].header['Sector'])
-            except (KeyError, TypeError, IndexError):
-                if verbose:
-                    print(f'Index {S}: cannot read Sector from header — skipping.')
-                continue
-
-            bundle = _process_one_sector(
-                Sector_,
-                hdus[S], CCDs[S], Cameras[S],
-                quality_masks[S], reference_pixels[S],
-            )
-            if bundle is not None:
-                bundles.append(bundle)
-                valid_hdus.append(hdus[S])
-
-        if not bundles:
-            return None, None, {}
-
-        (LC_df, Raw_LC_df, Rawclip_LC_df, Preclip_LC_df,
-         good_ind_df, bad_ind_df,
-         all_inj_LCs, all_inj_params,
-         hdu, agg_sap_diag) = _concat_bundles(bundles, valid_hdus)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # BRANCH B: Sector is a single int
-    # ─────────────────────────────────────────────────────────────────────────
-    elif isinstance(Sector, int):
-        print(f'TIC {ID}  Sector {Sector} ; Now creating Light Curve')
-
-        if verbose:
-            print('Step 0: Making Directories\n')
-        Make_dirs(Sector, cadence, default_settings, return_paths=False)
-
-        if verbose:
-            print('Step 1: Obtaining HDU from FFI/TPF\n')
-
-        try:
-            hdus_raw, CCDs_raw, Cameras_raw, qms_raw, rps_raw = gethdu(
-                star, ID, Sector, cadence, default_settings)
-        except AttributeError as AE:
-            print(AE)
-            return None, None, {}
-
-        timer(start, clock.time(), 'gethdu took:')
-
-        hdus, CCDs, Cameras, quality_masks, reference_pixels = (
-            _normalize_gethdu_outputs(
-                hdus_raw, CCDs_raw, Cameras_raw, qms_raw, rps_raw))          
-
-        if not any(h is not None for h in hdus):
-            _ensure_hdu_or_raise(None, ID, Sector, cadence)
-            return None, None, {}
-
-        bundle = _process_one_sector(
-            Sector,
-            hdus[0], CCDs[0], Cameras[0],
-            quality_masks[0], reference_pixels[0],
-        )
-
-        if bundle is None:
-            return None, None, {}
-
-        LC_df         = bundle['LC']
-        Raw_LC_df     = bundle['Raw']
-        Rawclip_LC_df = bundle['Rawclip']
-        Preclip_LC_df = bundle['Preclip']
-        good_ind_df   = bundle['good_ind']
-        bad_ind_df    = bundle['bad_ind']
-        all_inj_LCs   = bundle.get('inj_LC')
-        all_inj_params= bundle.get('inj_param')
-        agg_sap_diag  = bundle.get('sap_diag', {})   # NEW
-        hdu           = hdus[0]
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # BRANCH C: Sector is a list of ints
-    # ─────────────────────────────────────────────────────────────────────────
-    else:
-        bundles    = []
-        valid_hdus = []
-
-        for Sector_ in Sector:
-            Sector_ = int(Sector_)
-            print(f'\nTIC {ID}  Sector {Sector_}')
-
-            if verbose:
-                print('Step 0: Making Directories\n')
-            Make_dirs(Sector_, cadence, default_settings, return_paths=False)
-
-            if verbose:
-                print('Step 1: Obtaining HDU from FFI/TPF\n')
-
-            try:
-                hdus_raw, CCDs_raw, Cameras_raw, qms_raw, rps_raw = gethdu(
-                    star, ID, Sector_, cadence, default_settings)
-            except AttributeError as AE:
-                print(AE)
-                continue
-
-            timer(start, clock.time(), 'gethdu took:')
-
-            hdus, CCDs, Cameras, quality_masks, reference_pixels = (
-                _normalize_gethdu_outputs(
-                    hdus_raw, CCDs_raw, Cameras_raw, qms_raw, rps_raw))
-
-            if not any(h is not None for h in hdus):
-                if verbose:
-                    print(f'Sector {Sector_}: all HDUs None — skipping.')
-                continue
-
-            bundle = _process_one_sector(
-                Sector_,
-                hdus[0], CCDs[0], Cameras[0],
-                quality_masks[0], reference_pixels[0],
-            )
-            if bundle is not None:
-                bundles.append(bundle)
-                valid_hdus.append(hdus[0])
-
-        if not bundles:
-            return None, None, {}
-
-        (LC_df, Raw_LC_df, Rawclip_LC_df, Preclip_LC_df,
-         good_ind_df, bad_ind_df,
-         all_inj_LCs, all_inj_params,
-         hdu, agg_sap_diag) = _concat_bundles(bundles, valid_hdus)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Multi-sector summary plot
-    # ─────────────────────────────────────────────────────────────────────────
-    if get_all_sectors or Sector is None or isinstance(Sector, list):
-        sectors_for_plot = []
-        if isinstance(hdu, list):
-            for h in hdu:
-                if h is not None:
-                    try:
-                        sectors_for_plot.append(int(h[0].header['Sector']))
-                    except Exception:
-                        pass
-        if sectors_for_plot:
-            plot_it_all_up(
-                ID=ID,
-                nearby_star_catalog=nearby_star_catalog,
-                Sector=sectors_for_plot,          # list of ints
-                cadence=cadence,
-                hdu=hdu,                          # list of HDULists
-                RAWLC_df=Raw_LC_df,
-                clippedRAWLC_df=Rawclip_LC_df,
-                LC_df=LC_df,
-                good_ind_DF=good_ind_df,
-                bad_ind_DF=bad_ind_df,
-                preclipLC_df=Preclip_LC_df,
-                default_settings=default_settings,
-                # SAP diagnostics from aggregated dict
-                bkg_level_per_pix=agg_sap_diag.get('bkg_level_per_pix'),
-                bkg_trend=agg_sap_diag.get('bkg_trend'),
-                bkg_residuals=agg_sap_diag.get('bkg_residuals'),
-                quat_jitter=agg_sap_diag.get('quat_jitter'),
-                quat_status=agg_sap_diag.get('quat_status', 'not provided'),
-                qlp_result=agg_sap_diag.get('qlp_result'),
-                quality_flag=agg_sap_diag.get('quality_flag'),
-            )
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Final checks and saves
-    # ─────────────────────────────────────────────────────────────────────────
-    if LC_df is None or LC_df.empty:
-        print(f'No valid light curves extracted for TIC {ID}.')
-        return None, None, {}
-
-    LC_df         = LC_df.sort_values('Time').reset_index(drop=True)
-    Raw_LC_df     = Raw_LC_df.sort_values('Time').reset_index(drop=True)
-    Rawclip_LC_df = Rawclip_LC_df.sort_values('Time').reset_index(drop=True)
-    Preclip_LC_df = Preclip_LC_df.sort_values('Time').reset_index(drop=True)
-    good_ind_df   = good_ind_df.sort_values('Time').reset_index(drop=True)
-    bad_ind_df    = bad_ind_df.sort_values('Time').reset_index(drop=True)
-
-    savelcpath = default_settings.get('savelcpath')
-
-    if get_all_sectors or not isinstance(Sector, int):
-        df_len_check(LC_df, message='Multi-Sector NEMESIS Light Curve Lengths: ')
-        if verbose:
-            print(f'Saving LC to {savelcpath}TIC_{ID}_Multi_Sector_final_LC.csv')
-        LC_df.to_csv(
-            savelcpath + f'TIC_{ID}_Multi_Sector_final_LC.csv', index=False)
-        Raw_LC_df.to_csv(
-            savelcpath + f'TIC_{ID}_Multi_Sector_RAW_LC.csv', index=False)
-        Rawclip_LC_df.to_csv(
-            savelcpath + f'TIC_{ID}_Multi_Sector_RAW_LC_systematics_removed.csv',
-            index=False)
-        Preclip_LC_df.to_csv(
-            savelcpath + f'TIC_{ID}_Multi_Sector_final_LC_preclipped.csv',
-            index=False)
-        good_ind_df.to_csv(
-            savelcpath + f'TIC_{ID}_Multi_Sector_good_outliers.csv', index=False)
-        bad_ind_df.to_csv(
-            savelcpath + f'TIC_{ID}_Multi_Sector_bad_outliers.csv', index=False)
-        if for_injections and all_inj_LCs is not None:
-            all_inj_LCs.to_csv(
-                savelcpath + f'TIC_{ID}_Multi_Sector_TransitInjected_RAWLC.csv',
-                index=False)
-            all_inj_params.to_csv(
-                savelcpath + f'TIC_{ID}_Multi_Sector_TransitInjected_param.csv',
-                index=False)
-
-    timer(start, clock.time(), 'NEMESIS Light Curve production took:')
-    print('')
-    return hdu, LC_df, agg_sap_diag
 #
 #
 #
@@ -19360,21 +16746,8 @@ def LC_creation(ID, nearby_star_catalog, cadence, Sector, default_settings, **kw
     return hdu, LC_df, agg_sap_diag
 #
 #
-#
-###### putting it all together ##########
-###### putting it all together ##########
-###### putting it all together ##########
-#
-#
-#
-#
-#
-##########################################
-##########################################
 ##########################################
 ####### TRANSIT SEARCH FUNCTIONS #########
-##########################################
-##########################################
 ##########################################
 #
 #
@@ -19420,7 +16793,8 @@ def phasefold(T0, time, period, flux):
     return phase[ind],flux[ind]
 #
 #
-#UNUSED
+#UNUSED (keeping for legacy purposes, in case I want to use EDIVetter)
+#probably deprecated/incompatible with current NEMESIS
 def Vet_with_EDIVetter(ID, Sector, cadence, TLS_OUTPUT, qld, SDE_threshold, N_transits, path=None):
     """
 
@@ -19438,7 +16812,6 @@ def Vet_with_EDIVetter(ID, Sector, cadence, TLS_OUTPUT, qld, SDE_threshold, N_tr
     
     # for multi-sector useage
     if (Sector==None): #all sectors
-        #Sectors = search_sectors_from_filetype_and_path(path,ID,cadence)
         Sectors = search_sectors_from_filetype_and_path(ID,default_settings)
         Sector_str = str(Sectors[0])+'-'+str(Sectors[-1])
     else:
@@ -19601,7 +16974,8 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
     ``TIC_{ID}_{sector_tag}_TLS_model.csv``
     ``TIC_{ID}_{sector_tag}_TLS_bestfit.csv``
     ``TIC_{ID}_{sector_tag}_TLS_TCs.csv``
-    """      
+    """  
+    import pandas as pd
     # get function settings
     N_TLS_threads = default_settings.get('N_TLS_threads')
     N_transits = default_settings.get('N_transits')
@@ -19625,14 +16999,12 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
     if get_all_sectors or Sector is None or not isinstance(Sector, int):
         sector_tag = "Multi_Sector"
     else:
-        sector_tag = f"Sector_{Sector:04d}"        
-    
-    
+        sector_tag = f"Sector_{Sector:04d}"            
+    #
     #for reporting TLS model's planet radius
     from astropy import units as u
     R_earth = u.R_earth.to(u.cm)
     R_sun = u.R_sun.to(u.cm)
-    #N_TLS_threads=None
     if N_TLS_threads is None:
         from multiprocess import cpu_count #multiprocessing breaks M1 chip macs...
         max_cpus = int(cpu_count())
@@ -19646,23 +17018,13 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
     cdpp = CDPP(time,flux,error,'median','ppm',cad,binsize=(1.0/24.0))
     time_span = np.nanmax(time) - np.nanmin(time)    
     #
-    #
-    # PRE-V.186, OLD
-#     try:
-#         qld, M_star, M_star_min, M_star_max, R_star, R_star_min, R_star_max = catalog_info(TIC_ID=ID,verbose=verbose)
-#     except (requests.exceptions.ConnectionError,requests.exceptions.HTTPError) as E:
-#         clock.sleep(1) #pause 1 second then try again
-#         qld, M_star, M_star_min, M_star_max, R_star, R_star_min, R_star_max = catalog_info(TIC_ID=ID,verbose=verbose)
-    # PRE-V.186, OLD
-    #
-    # NEW
     star = nearby_star_catalog.loc[nearby_star_catalog['ID']==str(ID)].reset_index(drop=True)
     star = get_qld(star,verbose)    
     R_star, M_star = star['rad'].item(),star['mass'].item()
     R_star_min, M_star_min = star['e_rad'].item(),star['e_mass'].item()
     R_star_max, M_star_max = R_star_min, M_star_min
     qld = [star['qld_a'].item(), star['qld_b'].item()]
-    # NEW
+    #
     from transitleastsquares import transitleastsquares
     ###     
     # lets pick min/max of orbital period grid
@@ -19711,16 +17073,6 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
         TLS_TCs = tls_power.transit_times
         TLS_SR  = tls_power.SR
         #
-        #TLS_SDE = (TLS_Power-np.nanmedian(TLS_Power))/np.nanstd(TLS_Power)
-        #        
-        #power_raw = TLS_Power
-        #my_median = np.nanmedian(power_raw)
-#         power = power_raw - my_median
-#         # Re-normalize to range between median = 0 and peak = SDE
-#         # shift down to the mean being zero
-#         power = power - np.nanmean(power)
-#         TLS_SDE = np.nanmax(power / np.nanstd(power))
-        #TLS_SDE = ((power_raw - my_median) - np.nanmean(power_raw)) / np.nanstd(power_raw)
         TLS_SDE  = compute_sde_optimized(TLS_Power)
         #
         #
@@ -19798,7 +17150,7 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
             min_score_improvement=0.0,
         ))
 
-        ### Vet with EDI-Vetter
+        ### Vet with EDI-Vetter (probably deprecated/incompatible with current NEMESIS)
 #         if for_injections==False:
 #             if (type(Sector) is int):
 #                 Path=path+'Sector_'+str(Sector)+'/'
@@ -19813,7 +17165,6 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
 #             Path=Path+'Period_'+str(np.round(Period,2))+'_RP_'+str(np.round(R_planet_RE,2))+'/'        
                     
         if (Sector==None): #all sectors
-            #Sectors = search_sectors_from_filetype_and_path(Path,ID,cadence)
             Sectors = search_sectors_from_filetype_and_path(ID,default_settings)
             Sector_str = str(Sectors[0])+'-'+str(Sectors[-1])
         else:
@@ -19821,7 +17172,7 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
                 Sector_str = str(Sector)
             else: #multi-sector
                 Sector_str = str(Sector[0])+'-'+str(Sector[-1])                                                 
-        # NOT SURE I WANT TO USE EDI IF I'M USING LEO-VETTER....
+        # probably deprecated/incompatible with current NEMESIS
 #         EDI_results = Vet_with_EDIVetter(ID, Sector, cadence, tls_power, qld, 
 #                                          SDE_threshold=0, N_transits=N_transits,path=Path)
         # 
@@ -19829,12 +17180,6 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
         TLS_depths_arr=tls_power.transit_depths #array of mean depths
         TLS_depths_arr_uncertainty=tls_power.transit_depths_uncertainties
         #
-        #making assumption that median of array of mean depth errors is representative of depth error
-        #TLS_depth_err = np.nanmedian(TLS_depths_arr)/len(TLS_depths_arr) #new,float
-        # Uncertainty on the fractional transit depth (parts per one). TLS's SNR
-        # is the transit depth divided by its own uncertainty, so the fractional
-        # depth uncertainty is 1/SNR. Same estimator as the 11-04-2026 column
-        # patch (nemesis_tls_error_patch.py), so new runs and patched tables agree.
         TLS_depth_frac = 1.0 - TLS_depth
         _snr = float(tls_power.snr)
         if np.isfinite(_snr) and _snr > 0 and np.isfinite(TLS_depth_frac) and TLS_depth_frac > 0:
@@ -19854,9 +17199,6 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
         R_p = np.sqrt(1.0-TLS_depth)*R_star*R_sun/R_earth
         R_star_err = R_star_min
         #
-        #R_p_err = R_p * np.sqrt((R_star_err/R_star)**2 + (TLS_depth_err/TLS_depth)**2)
-        #
-        # R_p scales as sqrt(depth), so sigma_R / R = sigma_depth / (2 depth).
         R_p_err = R_p * np.sqrt((R_star_err/R_star)**2 + (0.5*TLS_depth_err/TLS_depth_frac)**2)
         ###
         #TLS models
@@ -19864,15 +17206,11 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
         TLS_model = tls_power.model_lightcurve_model
         ###        
         ###
-        import pandas as pd
-        ###
         TLSdf = pd.DataFrame({"TLS Periods":tls_power_periods, "TLS Power": TLS_Power, "TLS SR":TLS_SR, "TLS SDE":TLS_SDE})
         ###
         TLSmodeldf = pd.DataFrame({"Time":TLS_model_time, "Model": TLS_model})
         ###
         ###    
-        #
-        # NEW
         Vmag = star['Vmag'].item()
         Tmag = star['Tmag'].item()
         Gmag = star['GAIAmag'].item()
@@ -19901,25 +17239,16 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
         if use_sources_in_aperture==True:
             pix_mask, bkg_mask, images, matched_sectors = get_pix_and_bkg_masks_and_image_fluxes(ID, Sector, cadence,
                                                                                                  default_settings)
-            #
-            # PRE-V.186, OLD
-            # flux_contamination_ratio = calc_flux_contamination_in_aperture(ID,hdu,pix_mask,radial_cone_in_arcseconds=21*2)
-            # PRE-V1.86, OLD
-            #
-            # NEW
             nearby_star_catalog_in_aperture = get_sources_in_aperture_mask(ID,hdu,pix_mask,
                                                                            nearby_star_catalog,
                                                                            verbose=False)    
-            #flux_contamination_ratio = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog_in_aperture,ID=ID)
             flux_contamination_ratio, sigma_contamination = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog_in_aperture,
                                                                ID=ID)
             # NEW
             #
             if np.isfinite(flux_contamination_ratio)==False:
-                #flux_contamination_ratio = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,ID=ID)
                 flux_contamination_ratio, sigma_contamination = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,ID=ID)
         if use_sources_in_aperture==False:
-            #flux_contamination_ratio = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,ID=ID)
             flux_contamination_ratio, sigma_contamination = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,
                                                                                     ID=ID)
         ###
@@ -19986,19 +17315,6 @@ def TLS_func(ID,nearby_star_catalog, Sector,cadence,
         pass
 #
 #for determining BLS Period Error from HWHM of Peak in Power Spectrum
-
-# def peak(x, c): #NOT USED
-#     """
-#     This function is used for 
-#     Input Parameters
-#     ----------
-
-#     Returns
-#     -------
-#         *
-#     """      
-#     return np.exp(-np.power(x - c, 2) / 16.0)
-#
 def lin_interp(x, y, i, half):
     """
     This function is used to perform a simple
@@ -20361,6 +17677,7 @@ def ResampleLinear1D(periods, targetLength):
     new_periods = val1 * (1.0-index_rem) + val2 * index_rem
     assert(len(new_periods) == targetLength)
     return new_periods
+#
 def optimize_period_duration_grid_sizes(periods,durations,
                                         downsample_by_N_percent,
                                         cadence_of_observations): #not sure if useful/helpful, UNUSED
@@ -20377,27 +17694,6 @@ def optimize_period_duration_grid_sizes(periods,durations,
     print('before adjustment, duration grid length = ',f'{len(new_durations):,}')
     return new_periods, new_durations
 #
-# NEW
-# def compute_sde_optimized(periodogram_power):
-#     n = len(periodogram_power)
-
-#     # Calculate the mean and standard deviation of the entire power array
-#     total_mean = np.mean(periodogram_power)
-#     total_sum = np.sum(periodogram_power)
-#     total_std = np.std(periodogram_power)
-
-#     # Initialize an array to store the SDE values
-#     sde_values = np.zeros(n)
-
-#     for i in range(n):
-#         # Calculate the mean and standard deviation of the background (excluding i)
-#         mean_excluding_i = (total_sum - periodogram_power[i]) / (n - 1)
-#         std_excluding_i = np.sqrt((n * (total_std ** 2) - (periodogram_power[i] - total_mean) ** 2) / (n - 1))
-
-#         # Calculate SDE for the current power value
-#         sde_values[i] = (periodogram_power[i] - mean_excluding_i) / std_excluding_i
-
-#     return sde_values
 def compute_sde_optimized(periodogram_power):
     """
     Computes an array of SDE values, ensuring that max(SDE array) matches the classical SDE.
@@ -20424,7 +17720,6 @@ def compute_sde_optimized(periodogram_power):
 # NEW
 from typing import Any, Dict, Optional, Tuple
 import numpy as np
-
 
 def refine_transit_epoch_post_search(
     time: np.ndarray,
@@ -20654,7 +17949,8 @@ def refine_transit_epoch_post_search(
         "offset_days": float(best_offset),
         "offset_hours": float(dt_hours),
     }
-
+#
+#
 #
 def BLS_func(ID, nearby_star_catalog, Sector,cadence,hdu,
              time,flux,error, default_settings):
@@ -20780,25 +18076,14 @@ def BLS_func(ID, nearby_star_catalog, Sector,cadence,hdu,
     #
     from transitleastsquares import period_grid,duration_grid#, catalog_info
     #
-    # PRE-V.186, OLD
-#     try:
-#         qld, M_star, M_star_min, M_star_max, R_star, R_star_min, R_star_max = catalog_info(TIC_ID=ID,verbose=verbose)
-#     except (requests.exceptions.ConnectionError,requests.exceptions.HTTPError) as E:
-#         clock.sleep(1) #pause 1 second then try again
-#         qld, M_star, M_star_min, M_star_max, R_star, R_star_min, R_star_max = catalog_info(TIC_ID=ID,verbose=verbose)
-    # PRE-V.186, OLD
-    #
-    # NEW
     star = nearby_star_catalog.loc[nearby_star_catalog['ID']==str(ID)].reset_index(drop=True)
     star = get_qld(star,verbose)    
     R_star, M_star = star['rad'].item(),star['mass'].item()
     R_star_min, M_star_min = star['e_rad'].item(),star['e_mass'].item()
     R_star_max, M_star_max = R_star_min, M_star_min
     qld = [star['qld_a'].item(), star['qld_b'].item()]
-    # NEW
     #
     # First lets make the grid
-    #
     # lets pick min/max of orbital period grid
     if maxP is None:
         maxP = time_span/N_transits #orbital periods for grid
@@ -20833,14 +18118,6 @@ def BLS_func(ID, nearby_star_catalog, Sector,cadence,hdu,
         bls = BoxLeastSquares(time, flux, error)
         bls_power = bls.power(periods, durations)
         #
-        #
-#         BLS_SDE = (bls_power.power - np.nanmean(bls_power.power))/np.nanstd(bls_power.power)
-        #
-#         power_raw = bls_power.power
-#         my_median = np.nanmedian(power_raw)
-        # Re-normalize to range between median = 0 and peak = SDE
-        # shift down to the mean being zero
-        #BLS_SDE = ((power_raw - my_median) - np.nanmean(power_raw)) / np.nanstd(power_raw)
         BLS_SDE  = compute_sde_optimized(bls_power.power)
         #
         #
@@ -20890,9 +18167,7 @@ def BLS_func(ID, nearby_star_catalog, Sector,cadence,hdu,
             min_depth=0.0,
             min_snr=0.0,
             min_score_improvement=0.0,
-        ))        
-        
-        
+        ))                        
         #
         #count transit times based on T0 and P
         #from transitleastsquares.stats import all_transit_times
@@ -20909,36 +18184,6 @@ def BLS_func(ID, nearby_star_catalog, Sector,cadence,hdu,
             print('No BLS model output')
             BLS_model=np.ones_like(time)
         #
-        #saving results
-#         if for_injections==False:
-#             if (type(Sector) is int):
-#                 Path=path+'Sector_'+str(Sector)+'/'
-#             if (get_all_sectors==True) or (Sector is None) or (type(Sector) is not int):
-#                 Path=path+'Multi_Sector/'
-#         ###
-#         if for_injections==True:
-#             if (type(Sector) is int):
-#                 Path=path+'Sector_'+str(Sector)+'/'
-#             if (get_all_sectors==True) or (Sector is None) or (type(Sector) is not int):
-#                 Path=path+'Multi_Sector/'
-#             Period, R_planet_RE, T0 = inject_param_P_RP_T0
-#             Path=Path+'Period_'+str(np.round(Period,2))+'_RP_'+str(np.round(R_planet_RE,2))+'/'      
-            
-        #Path = generate_injection_path(path, Sector, get_all_sectors, inject_param_P_RP_T0, for_injections)
-#         Path = generate_injection_path(Sector, default_settings)
-#         ###
-#         if (cadence=='long') or (cadence=='30 minute') or (cadence=='10 minute'):
-#             saveReportpath = Path+'NEMESIS_FFI_BLS_Report/'
-#         if (cadence=='short') or (cadence=='2 minute') or (cadence=='20 second') or (cadence=='fast'):
-#             saveReportpath = Path+'NEMESIS_TPF_BLS_Report/'
-#         ###
-#         if os.path.exists(saveReportpath)==True:
-#     #         print('folder exists, moving on...') #feel free to uncomment these out
-#             pass
-#         else:
-#     #         print('making directory')
-#             os.makedirs(saveReportpath)
-#         default_settings.setdefault('saveBLSReportpath',saveReportpath)
         ###
         import pandas as pd
         #
@@ -20987,39 +18232,27 @@ def BLS_func(ID, nearby_star_catalog, Sector,cadence,hdu,
         # this works for south sectors but in north sectors, mdumps aren't consistent
         mdumps = np.nanmedian(np.diff(mdump_times[np.where((np.diff(mdump_times)>1)==True)]))
         ####
-        #calculate flux contamination of nearby stars within 3 TESS pixels (we need pix_mask)
+        #calculate flux contamination of nearby stars within N TESS pixels (we need pix_mask)
         # 
         if use_sources_in_aperture==True:
-            # careful with Path usage here
-#             pix_mask, bkg_mask, images, matched_sectors = get_pix_and_bkg_masks_and_image_fluxes(ID, Sector, path, cadence,
-#                                                                     default_settings=default_settings)    
+            # careful with Path usage here  
             pix_mask, bkg_mask, images, matched_sectors = get_pix_and_bkg_masks_and_image_fluxes(ID, Sector, cadence,
                                                                                                  default_settings)
             #
-            #
-            # PRE-V.186, OLD
-            # flux_contamination_ratio = calc_flux_contamination_in_aperture(ID,hdu,pix_mask,radial_cone_in_arcseconds=21*2)
-            # PRE-V1.86, OLD
-            #
-            # NEW
             nearby_star_catalog_in_aperture = get_sources_in_aperture_mask(ID,hdu,pix_mask,
                                                                            nearby_star_catalog,
                                                                            verbose=False)    
-            #flux_contamination_ratio = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog_in_aperture,ID=ID)
             flux_contamination_ratio, sigma_contamination = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog_in_aperture,
                                                                ID=ID)
-            # NEW
+            #
             #
             if np.isfinite(flux_contamination_ratio)==False:
-                #flux_contamination_ratio = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,ID=ID)
                 flux_contamination_ratio, sigma_contamination = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog, ID=ID)
         if use_sources_in_aperture==False:
-            #flux_contamination_ratio = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,ID=ID)
             flux_contamination_ratio, sigma_contamination = calc_flux_contamination(nearby_star_catalog=nearby_star_catalog,
                                                                                     ID=ID)
         ### 
         ###    
-        ### 
         try:
             stats = bls.compute_stats(BLS_Period,BLS_Dur,BLS_T0)
             BLS_Depth_odd,BLS_Depth_odd_err = stats['depth_odd'][0],stats['depth_odd'][1]
@@ -21524,16 +18757,7 @@ def Transit_plot(ID,nearby_star_catalog,Sector,cadence,hdu,method,input_LC, \
     if show_fig==True:
         plt.show()
 #
-#
-#
-#
 # functions needed to produce 1 page TLS Validation Reports
-# functions needed to produce 1 page TLS Validation Reports
-# functions needed to produce 1 page TLS Validation Reports
-# functions needed to produce 1 page TLS Validation Reports
-# functions needed to produce 1 page TLS Validation Reports
-#
-#
 #
 def plot_odd_even_transits(LC_df, TLSbestfit_df, TLSTCs_df, TLSmodel_df, ax,fig):
     """
@@ -21682,12 +18906,9 @@ def plot_odd_even_transits(LC_df, TLSbestfit_df, TLSTCs_df, TLSmodel_df, ax,fig)
         spacing=spacing*3
     else:
         spacing=spacing*1.5
-    #print('spacing',spacing)
     if spacing < 3*np.nanstd(Oddflux):
         spacing = 3*np.nanstd(Oddflux)
-    #print('new spacing',spacing)
-    
-    
+    #
     if len(Odd)>1:
         ax.plot(24*Odd,np.array(Oddflux)+spacing,color='grey',marker='.',\
                 linestyle='none',markersize=markersize+1, rasterized=True,label='Odd',zorder=-10)
@@ -21696,10 +18917,7 @@ def plot_odd_even_transits(LC_df, TLSbestfit_df, TLSTCs_df, TLSmodel_df, ax,fig)
                 linestyle='none',markersize=markersize+1, rasterized=True,label='Even',zorder=-10)
     ax.plot(24*pf_model,ff_model-spacing,'r.-',linewidth=0.5,markersize=1,label='TLS Model',zorder=10)
     ax.plot(24*pf_model,ff_model+spacing,'r.-',linewidth=0.5,markersize=1,zorder=10)
-    ###
-    ###
-    #check that ylimits makes sense (particularly for 2min data)
-    # print('O/E lengths',len(Evenflux),len(evenmask),len(Evenflux[evenmask]),len(Oddflux),len(oddmask),len(Oddflux[oddmask]))
+    #
     #
     ymax = np.nanmax(np.nanmean(ff_model)+3*spacing)
     ymin = np.nanmin(np.nanmean(ff_model)-3*spacing)
@@ -21728,8 +18946,6 @@ def plot_odd_even_transits(LC_df, TLSbestfit_df, TLSTCs_df, TLSmodel_df, ax,fig)
     #
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-#     ax.text(0.085,0.915,\
-#             'N Transits: '+str(N_transits)+'; \nO/E mismatch '+str(np.round(odd_even_mismatch,3))+r' ${\sigma}$',transform=fig.transFigure,size=fontsize-2)
     ax.text(0.025, 1-0.025,\
             'N Transits: \n'+str(N_transits)+'\nO/E mismatch: \n'+str(np.round(odd_even_mismatch,3))+r' ${\sigma}$',
             va='top', transform=ax.transAxes,size=fontsize-2)
@@ -21889,9 +19105,7 @@ def plot_phasefold_LCs(ID,hdu,LC_df,TLS_df,TLSmodel_df,TLSbestfit_df, axa,axb,ax
     XLIM=3.5*Dur    
     YLIM=2*Depth
     # 
-    # this requires reading in a saved file. Can this be recalculated instead?
-    # T_C_array = np.array(TLSTCs_df['TLS TCs [BTJD]'])
-    T_C_array = all_transit_times(T0, time, P) #yes it can!
+    T_C_array = all_transit_times(T0, time, P)
     #
     ####
     #calculate full phase 0 to 1 + an offset to shift midtransit from 0 to offset
@@ -21912,11 +19126,10 @@ def plot_phasefold_LCs(ID,hdu,LC_df,TLS_df,TLSmodel_df,TLSbestfit_df, axa,axb,ax
     #power spectra limits for PFLCs
     try:
         TLSPmin,TLSPmax = np.nanmin(np.array(TLS_df['TLS Periods'])) , np.nanmax(np.array(TLS_df['TLS Periods']))
-    except KeyError: # this shouldn't exist in newer code...
+    except KeyError: 
         TLSPmin,TLSPmax = np.nanmin(np.array(TLS_df['BLS Periods'])) , np.nanmax(np.array(TLS_df['BLS Periods']))
     ###
     # plot LC
-    #cad=np.nanmedian(np.diff(time))
     cad = np.nanmedian(np.diff(time[np.isfinite(time)]))
     cdpp_sap = CDPP(time,sap_flux,sap_error,'median','ppm',cad,binsize=(1.0/24.0))
     cdpp_det = CDPP(time,flux,error,'median','ppm',cad,binsize=(1.0/24.0))
@@ -22133,10 +19346,7 @@ def plot_image(ID, nearby_star_catalog, hdu, Sector, cadence,
 
         pm = pix_mask[0] if (pix_mask is not None and np.ndim(pix_mask) == 3) else pix_mask
         bm = bkg_mask[0] if (bkg_mask is not None and np.ndim(bkg_mask) == 3) else bkg_mask
-
-#         plot_cutouts(ID, nearby_star_catalog, Sector, cadence, hdu,
-#                      pm, bm, reference_pixel, ncols, fig, ax,
-#                      cbarpad, default_settings)
+        #
         plot_cutouts_ALT(ID, nearby_star_catalog, Sector, cadence, hdu,
                  pm, bm, reference_pixel, ncols, fig, ax,
                  cbarpad, default_settings,
@@ -22155,9 +19365,6 @@ def plot_image(ID, nearby_star_catalog, hdu, Sector, cadence,
         bm = bkg_mask[0] if (bkg_mask is not None and np.ndim(bkg_mask) == 3) else bkg_mask
 
         if pm is not None and np.ndim(pm) == 2:
-#             plot_cutouts(ID, nearby_star_catalog, Sector, cadence,
-#                          hdu, pm, bm, reference_pixel,
-#                          ncols, fig, ax, cbarpad, default_settings)
             plot_cutouts_ALT(ID, nearby_star_catalog, Sector, cadence, hdu,
                  pm, bm, reference_pixel, ncols, fig, ax,
                  cbarpad, default_settings,
@@ -22254,172 +19461,6 @@ def plot_centroids_in_phase(LC_df,BLSorTLSbestfit_df,ax_placement):#ax):
 #
 #
 #
-def safe_skyview_stamp_OLD(ra,
-                       dec,
-                       survey='DSS2 Red',
-                       scaling='Linear',
-                       sizepix=300,
-                       flip=True,
-                       convolvewith=None,
-                       forcefetch=False,
-                       cachedir=None,
-                       timeout=20.0,
-                       retry_failed=False,
-                       savewcsheader=True,
-                       verbose=False):
-    """
-    Wrapper around astrobase.plotbase.skyview_stamp that ALWAYS returns (stamp, hdr)
-    and NEVER raises. On any failure, returns (None, None).
-    """
-    import random
-    from requests.exceptions import ConnectionError, Timeout, RequestException
-    from urllib3.exceptions import NewConnectionError, MaxRetryError, NameResolutionError
-
-    try:
-        from astrobase.plotbase import skyview_stamp
-    except Exception as e:
-        if verbose:
-            print(f"[safe_skyview_stamp] import failed → {e}")
-        return None, None
-
-    # Patch randint to avoid float bounds issues in astrobase
-    _real_randint = random.randint
-    def _safe_randint(a, b):
-        try:
-            return _real_randint(int(a), int(b))
-        except Exception:
-            return _real_randint(0, int(b))
-    random.randint = _safe_randint
-
-    try:
-        try:
-            out = skyview_stamp(ra=ra, decl=dec,
-                                survey=survey, scaling=scaling,
-                                sizepix=int(sizepix), flip=flip,
-                                convolvewith=convolvewith, forcefetch=forcefetch,
-                                cachedir=cachedir, timeout=timeout,
-                                retry_failed=False,          # be conservative
-                                savewcsheader=savewcsheader,
-                                verbose=verbose)
-        except (ConnectionError, Timeout, NewConnectionError,
-                MaxRetryError, NameResolutionError, RequestException, TimeoutError) as net:
-            if verbose:
-                print(f"[safe_skyview_stamp] network/resolve failure → {net}")
-            out = None
-        except Exception as e:
-            if verbose:
-                print(f"[safe_skyview_stamp] skyview_stamp error → {e}")
-            out = None
-
-        if out is None:
-            return None, None
-        if isinstance(out, tuple):
-            if len(out) >= 2:
-                return out[0], out[1]
-            if len(out) == 1:
-                return out[0], None
-            return None, None
-        return out, None  # sometimes just an array
-
-    finally:
-        random.randint = _real_randint
-#
-#
-def plot_dss_orientation_OLD(ax,
-                         ID,
-                         nearby_star_catalog,
-                         downloadpath,
-                         cutoutsize=11,
-                         do_DSS_plot=True,
-                         remove_fits=True,
-                         verbose=True):
-    """
-    Fetch DSS and draw N/E. If anything fails (DNS/HTTP/WCS/FITS), place 'No DSS image'
-    text and return cleanly. Uses the SAME cache root as TESScut/TPF (downloadpath).
-    """
-    import os, numpy as np, matplotlib.pyplot as plt, glob
-    from astropy.wcs import WCS
-    import astropy.units as u
-    from astropy.coordinates import SkyCoord
-    from matplotlib.patches import FancyArrowPatch
-
-    ax.set_title("DSS", fontsize=12)
-    ax.set_xticks([]); ax.set_yticks([])
-
-    if not do_DSS_plot or nearby_star_catalog is None or len(nearby_star_catalog) == 0:
-        ax.text(0.5, 0.5, 'No DSS image', ha='center', va='center', transform=ax.transAxes)
-        return
-
-    # robust ID -> ra/dec lookup
-    row = nearby_star_catalog.loc[nearby_star_catalog['ID'].astype(str) == str(int(ID))]
-    if len(row) == 0:
-        row = nearby_star_catalog.loc[nearby_star_catalog['ID'].astype(str) == str(ID)]
-    if len(row) == 0:
-        ax.text(0.5, 0.5, 'No DSS image', ha='center', va='center', transform=ax.transAxes)
-        return
-
-    ra  = float(row['ra'].iloc[0])
-    dec = float(row['dec'].iloc[0])
-
-    # SAME cache root you use elsewhere
-    cache_root = str(downloadpath)  # no new subdir
-    sizepix = int(cutoutsize*21)    # TESS ~21"/pix → DSS pixel side length
-
-    stamp, hdr = _nemesis_skyview_stamp(ra=ra, dec=dec,
-                                    sizepix=sizepix,
-                                    #cachedir=cache_root,   # SAME place
-                                    cachedir=None, #it's ok not to cache these, DSS query is quick and stateless                                    
-                                    verbose=verbose,
-                                    savewcsheader=True)
-
-    if stamp is None:
-        ax.text(0.5, 0.5, 'No DSS image', ha='center', va='center', transform=ax.transAxes)
-        return
-
-    ax.imshow(stamp, cmap=plt.cm.Greys, origin='lower')
-
-    # N/E overlay if WCS is available
-    try:
-        wcs = WCS(hdr) if hdr is not None else None
-    except Exception as e:
-        if verbose:
-            print(f"[plot_dss_orientation] WCS init failed → {e}")
-        wcs = None
-
-    if wcs is not None:
-        try:
-            ny, nx = stamp.shape
-            cx, cy = nx/2., ny/2.
-            c_world = wcs.pixel_to_world(cx, cy)
-            north = SkyCoord(c_world.ra, c_world.dec + 0.1*u.deg)
-            east  = SkyCoord(c_world.ra + 0.1*u.deg/np.cos(c_world.dec), c_world.dec)
-            nxN, nyN = wcs.world_to_pixel(north)
-            nxE, nyE = wcs.world_to_pixel(east)
-            vN = np.array([nxN-cx, nyN-cy])
-            vE = np.array([nxE-cx, nyE-cy])
-            L  = ny*0.20
-            vN = vN/np.hypot(*vN)*L
-            vE = vE/np.hypot(*vE)*L
-            origin = np.array([1.1*L if vE[0] > 0 else nx-1.1*L, 10.0])
-            kw = dict(arrowstyle='->', mutation_scale=6, lw=2)
-            ax.add_patch(FancyArrowPatch(origin, origin+vN, **kw))
-            ax.text(*(origin+vN*1.1), 'N', fontsize=12, ha='center', va='center')
-            ax.add_patch(FancyArrowPatch(origin, origin+vE, **kw))
-            ax.text(*(origin+vE*1.1), 'E', fontsize=12, ha='center', va='center')
-        except Exception as e:
-            if verbose:
-                print(f"[plot_dss_orientation] N/E overlay failed → {e}")
-
-    # OPTIONAL: if you want to purge DSS FITS that SkyView dropped into cache_root,
-    # do it carefully and non-fatal. If you don’t want any purge, delete this block.
-    if remove_fits:
-        try:
-            for fn in glob.glob(os.path.join(cache_root, "*.fits*")):
-                try: os.remove(fn)
-                except OSError: pass
-        except Exception:
-            pass
-####
 def _nemesis_skyview_stamp(
     ra: float,
     dec: float,
@@ -22554,22 +19595,7 @@ def _nemesis_skyview_stamp(
         import tempfile
         import astropy.utils.data as aud
         #
-        _saved_cache_dir = aud.conf.cache_dir
-        #
-#         out = skyview_stamp(
-#             ra=ra, decl=dec,
-#             survey=survey_name,
-#             scaling=scaling,
-#             sizepix=int(sizepix),
-#             flip=flip,
-#             convolvewith=convolvewith,
-#             forcefetch=force,
-#             cachedir=cachedir,
-#             timeout=timeout,
-#             retry_failed=False,
-#             savewcsheader=savewcsheader,
-#             verbose=verbose,)
-        
+        _saved_cache_dir = aud.conf.cache_dir        
         try:
             with tempfile.TemporaryDirectory() as _tmpdir:
                 aud.conf.cache_dir = _tmpdir
@@ -22581,7 +19607,6 @@ def _nemesis_skyview_stamp(
                     flip=flip,
                     convolvewith=convolvewith,
                     forcefetch=force,
-#                     cachedir=cachedir,
                     cachedir=_tmpdir,
                     timeout=timeout,
                     retry_failed=False,
@@ -22717,10 +19742,9 @@ def _nemesis_skyview_stamp(
 
     finally:
         random.randint = _real_randint
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-
+#
+#
+#
 def plot_dss_orientation(
     ax,
     ID,
@@ -23085,14 +20109,9 @@ def plot_dss_orientation(
     elif show_mask_overlay and not use_tess_frame and verbose:
         print('[plot_dss_orientation] mask overlay skipped: '
               'reproject unavailable, falling back to raw DSS orientation')
-
-####NEW
-####
 #
 #
 #
-## NOT SURE I WANT TO USE EDI IF I'M USING LEO-VETTER
-# def plot_text(ID,Sector,TLSbestfit_df,TLSTCs_df,EDI_results,fig,BLSorTLS): 
 def plot_text(ID,Sector,TLSbestfit_df,TLSTCs_df, fig,BLSorTLS): 
     """
 
@@ -23468,13 +20487,8 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
             LC_df = pd.read_csv(savelcpath+'TIC_'+str(ID)+f'_{_sector_tag}_final_LC.csv')
     ###
     if BLSorTLS=='BLS':        
-        # EDI Vetter Unplugged requires TLS outputs
-        # I would need to modify source code to use it for BLS
-        # future feature idea...
         if (Sector==None): #all sectors
-            #Sectors = search_sectors_from_filetype_and_path(Path,ID,cadence)
             Sectors = search_sectors_from_filetype_and_path(ID,default_settings)
-            #print('Sectors in Vetting Report:',Sectors,'\n',Path)
             Sector_str = str(Sectors[0])+'-'+str(Sectors[-1])
         else:
             if (type(Sector)==int): #single sector
@@ -23523,10 +20537,7 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
             ###
     txt_array=list(bestfit_df.columns.values)
     ###
-    ###
-    #reading in a lot of dataframes can take up RAM, this can help clear it with gc.collect()
     import gc 
-    #reading in a lot of dataframes can take up RAM, this can help clear it with gc.collect()
     ###
     import time as clock
     start=clock.time()
@@ -23562,18 +20573,7 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
     ###
     # TESS Image Cutout
     ax7_placement=gs1[2:4,left]
-#     plot_image(ID,nearby_star_catalog,hdu,
-#                Sector,
-#                cadence,Path,
-#                ax7_placement,fig,fs,ncols=4,cbarpad=0,\
-#                default_settings=default_settings)
-#     _, _pix_mask, _bkg_mask, _gaia_df, _target_gaia_id = plot_image(
-#         ID, nearby_star_catalog, hdu, Sector, cadence,
-#         ax_placement=ax7_placement,
-#         fig=fig, fs=fs, ncols=4, cbarpad=0,
-#         default_settings=default_settings,
-#         return_masks=True,)
-    
+    #
     _, _pix_mask, _bkg_mask, _gaia_df, _target_gaia_id = plot_image_ALT(
         ID, nearby_star_catalog, hdu, Sector, cadence,
         ax_placement=ax7_placement,
@@ -23582,7 +20582,7 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
         return_masks=True,
         draw_legend=False, #we don't want legend here, will be on DSS below
     )
-
+    #
     # Step 2: flatten 3-D masks to 2-D for the DSS overlay.
     # get_pix_and_bkg_masks_and_image_fluxes can return (ncad, ny, nx) stacks;
     # we want the representative 2-D slice.
@@ -23600,7 +20600,6 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
     ###
     # DSS Image
     ax9 = fig.add_subplot(gs1[4:6, middle])
-    #plot_dss_orientation(ax9,ID,nearby_star_catalog,downloadpath,cutoutsize=11)
     plot_dss_orientation(ax9,ID,nearby_star_catalog,
                          downloadpath=downloadpath, hdu=hdu,# list or single HDUList
                          pix_mask=_pix_mask,bkg_mask=_bkg_mask,
@@ -23687,8 +20686,6 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
     )
     ### 
     #plot text from stellar and planet parameters
-    # # NOT SURE I WANT TO USE EDI IF I'M USING LEO-VETTER
-#     plot_text(ID,Sector,bestfit_df,TCs_df,EDI_results,fig,BLSorTLS)
     plot_text(ID,Sector,bestfit_df,TCs_df,fig,BLSorTLS)
     ###
     gs1.update(wspace=0.0, hspace=0.5)
@@ -23707,17 +20704,12 @@ def Vetting_Report(ID,nearby_star_catalog,Sector,cadence,
     #
     runtime=end-start
     #
-    # clear garbage collection in RAM
+    # clear garbage collection 
     del Power_df, model_df, bestfit_df, TCs_df
     gc.collect()
     #
     if verbose==True:
         timer(start=start,end=end,message='Vetting Report took:')
-#
-#
-#            
-#
-#
 #
 #
 # FOR MULTI-PAGE TLS REPORTS
@@ -23836,8 +20828,6 @@ def append_PDF(ID,Sector,cadence, input_files,BLSorTLS, default_settings):
         output_file = input_file[:-4]+'.pdf'
         os.system('rm -r '+str(input_file))
         os.system('rm -r '+str(output_file))
-#
-#
 #
 #
 #
@@ -24678,14 +21668,11 @@ def odd_even_mismatch_plot(ax1,ax2,ax3,ax4,ax5,ax6,ax7,ax8,ax9,ID,Sector,cadence
         deptheven = 1 - np.nanmin(np.array(Evenflux)[meven])
     except ValueError:
         deptheven=None
-#     ax9.axhline(y=1-np.nanmean(EvenDepths)/1000,color='green',linestyle='-')
-#     ax9.axhline(y=1-np.nanmean(OddDepths)/1000,color='green',linestyle='--',label='Odd/Even Mismatch')
     if depthodd is not None:
         ax9.axhline(y=1-depthodd,color='green',linestyle='-')
     if deptheven is not None:
         ax9.axhline(y=1-deptheven,color='green',linestyle='--',label='Odd/Even Mismatch')
     #
-    #ax4.set_title('All Odd / Even Events at 0.5x, 1x and 2x Periods'+'\n'+'Odd',x=0.55,y=1.02,fontsize=fontsize)
     ax1.set_title('All Odd / Even Events at 0.5x Period'+'\n'+'Odd',x=0.55,y=1.02,fontsize=fontsize)
     ax4.set_title('All Odd / Even Events at 1x Period'+'\n'+'Odd',x=0.55,y=1.02,fontsize=fontsize)
     ax7.set_title('All Odd / Even Events at 2x Period'+'\n'+'Odd',x=0.55,y=1.02,fontsize=fontsize)
@@ -24703,9 +21690,7 @@ def odd_even_mismatch_plot(ax1,ax2,ax3,ax4,ax5,ax6,ax7,ax8,ax9,ID,Sector,cadence
     if 1+YLIM < np.nanmedian(ff[mask1])+Nstds*np.nanstd(ff[mask1]):
         ymax=np.nanmedian(ff[mask1])+Nstds*np.nanstd(ff[mask1])
     else:
-        ymax=1+YLIM    
-    
-    
+        ymax=1+YLIM            
     ax1.set_ylim(ymin,ymax)
     ax2.set_ylim(ymin,ymax)
     ax3.set_ylim(ymin,ymax)
@@ -25037,9 +22022,6 @@ def Vetting_Report_3rd_page(ID,Sector,LC_df, path, cadence,TLSbestfit_df,BLSorTL
     #plt.show()
 #
 #
-#  
-#
-#
 def get_flux_at_TN(pf, ff, TN, window=None):
     """
     Get the flux value closest to a specific transit contact point (T1, T4, etc.)
@@ -25091,7 +22073,7 @@ def get_flux_at_TN(pf, ff, TN, window=None):
     # Return the phase and flux values at the closest point
     return pf_in_window[closest_idx], ff_in_window[closest_idx]
 #
-
+#
 def create_box_model(times, period, epoch, duration, depth): #UNUSED BUT USEFUL
     """Create boxcar model.
     Parameters
@@ -25119,10 +22101,6 @@ def create_box_model(times, period, epoch, duration, depth): #UNUSED BUT USEFUL
 
     mnT = np.min(times)
     mxT = np.max(times)
-    
-#     mnT = -duration
-#     mxT = +duration
-#     print(mnT,mxT)
     
     #calculate orbit numbers
     e0 = int(np.floor((mnT - epoch) / period))
@@ -25166,39 +22144,18 @@ def create_box_model_for_phasefolded(pf, period, epoch, duration, depth): #UNUSE
     return box+1
 
 def bin_ff(pf,ff,duration,cadence):
-#     if np.round(cadence*24*60,3)<=10:
-#         nbins=int(len(pf)/100)
-#     else:
-#         nbins=int(len(pf)/25)
-        
-    # NEW
+
     Ndur=4
-    #nbins = int(Ndur * duration / cadence)
     
     import astropy.units as u
     if ((cadence*u.day).to(u.minute)).value < (10*u.minute).value:
         min_bins = 100
     else:
         min_bins = 25
-    #min_bins=10
     nbins = np.max([int(Ndur * duration / cadence), min_bins])
     print('nbins in bin_ff:',nbins, 'vs',int(Ndur * duration / cadence))
-    
-    # NEW
-    #bins = np.linspace(-Ndur*duration, Ndur*duration, nbins+1 )
+
     bins = np.linspace(np.nanmin(pf[np.abs(pf) <= Ndur*duration]), np.nanmax(pf[np.abs(pf) <= Ndur*duration]), nbins+1 )
-    #
-#     denom, _ = np.histogram(pf, bins)
-#     # NEW
-#     #avoid dividing by 0
-#     denom[denom == 0] = np.finfo(float).eps
-#     # NEW
-#     num, _ = np.histogram(pf, bins, weights=ff)
-    #
-    # denom[num == 0] = 1.0 # don't do this
-    # return (0.5*(bins[1:] + bins[:-1])), num / denom
-    #
-    #
     # Compute histogram denominator (number of points in each bin)
     denom, _ = np.histogram(pf, bins)    
     # Compute histogram numerator (sum of fluxes in each bin)
@@ -25213,7 +22170,7 @@ def bin_ff(pf,ff,duration,cadence):
     bin_centers = 0.5 * (bins[1:] + bins[:-1])
     # Return only valid bins
     return bin_centers[valid_bins], binned_flux[valid_bins]
-
+#
 #
 import numpy as np
 
@@ -25316,11 +22273,10 @@ def nanchecker(mirrored_phases, mirrored_fluxes, check_mirrored_fluxes, Nstd, du
 
     non_nan_mirrored_indices = (md, mdL, mdR)
     return non_nan_mirrored_indices
-
-
-
+#
 # HELPER FUNCTIONS FOR mirror_and_model_left_right_transit
-# Sub-function to filter phase and flux arrays to ±3*transit_duration
+# Sub-function to filter phase and flux arrays to +/-3 * transit_duration
+#
 def filter_phase_range(phase, flux, transit_duration):
     mask = np.where(np.abs(phase) <= 3*transit_duration)[0]
     return phase[mask], flux[mask]
@@ -25371,10 +22327,6 @@ def align_arrays(phase_data, flux_data, phase_model, model_flux):
     else:
         # If all checks pass, proceed with interpolation
         interp_model_flux = interp1d(phase_model, model_flux, kind='linear', bounds_error=False, fill_value='extrapolate')
-        #print("Interpolation model created successfully.")        
-
-
-    #interp_model_flux = interp1d(phase_model, model_flux, kind='linear', bounds_error=False, fill_value='extrapolate')
 
     # Apply the interpolation to the data phase values
     aligned_model_flux = interp_model_flux(phase_data)
@@ -25485,11 +22437,7 @@ def compare_to_model(phase, flux, model_phase, model_flux, transit_results_df):
     print('compare_to_model transit_duration (in days):',transit_duration)
     # Step 0:  calculate noise for later (duration std)
     in_transit_mask = (phase >= -1 * transit_duration) & (phase <= 1 * transit_duration)
-    #OLD
     sigma_LC = np.nanstd(flux[in_transit_mask])
-#     cadence = np.nanmedian(np.diff(phase)) #I think this works...
-#     N_intransit  = len(flux[in_transit_mask])
-#     sigma_dur = sigma_LC * cadence / np.sqrt(N_intransit)
     #
     sigma_LC = np.nanstd(flux[in_transit_mask])
     cadence = np.nanmedian(np.diff(phase))  # in days
@@ -25590,28 +22538,19 @@ def compare_to_model(phase, flux, model_phase, model_flux, transit_results_df):
     phase_at_T1,flux_at_T1 = get_flux_at_TN(phase,flux,T1,window=transit_duration)
     phase_at_T4,flux_at_T4 = get_flux_at_TN(phase,flux,T4,window=transit_duration)
     duration = np.nanmax(phase_at_T4) - np.nanmin(phase_at_T1)        
-    duration_std = sigma_dur# np.sqrt( (np.nanstd(phase_at_T1))**2 + (np.nanstd(phase_at_T4))**2 )       
+    duration_std = sigma_dur
 
     # 3. Calculate depth/duration
-    #symmetry_depth_metric = np.abs( (depth_left  - depth_right)) / depth
     symmetry_depth_metric = np.abs( (depth_left  - depth_right)) 
 
     print('duration check (L, R, O): ',duration_left,duration_right,duration,'\n')
     print('duration std (L,R,O): ',duration_left_std,duration_right_std,duration_std,'\n')
     print('dur vs std:',duration,duration_std)
 
-    #symmetry_duration_metric = np.abs( (duration_left  - duration_right)) / duration
-    symmetry_duration_metric = np.abs( (duration_left  - duration_right)) #/ duration
+    symmetry_duration_metric = np.abs( (duration_left  - duration_right)) 
     print('symmetry_duration_metric:',symmetry_duration_metric)
     depth_over_duration = depth / duration        
-
-    #symmetry_depth_duration_metric= symmetry_metric / depth_over_duration
     symmetry_depth_duration_metric= (symmetry_depth_metric / symmetry_duration_metric) / depth_over_duration        
-
-    #orig function has avg depth / avg dur / (depth/dur)
-    # DOUBLE CHECK
-
-
     # Fractional Transit Duration
     def q_tran(duration,period):
         #make sure they're both in units of days
@@ -25649,102 +22588,7 @@ def compare_to_model(phase, flux, model_phase, model_flux, transit_results_df):
     return metrics, left_phases,left_fluxes , right_phases,right_fluxes
 #
 #
-def check_transit_symmetry_OLD(metrics, snr=None):
-    """
-    Checks the symmetry of the transit by comparing the left and right mirrored transit depths and durations.
-    Returns a pass/fail result based on predefined thresholds.
-
-    Parameters:
-    ----------
-    depth_left : float
-        Transit depth measured from the left side of the phase-folded light curve.
-    depth_right : float
-        Transit depth measured from the right side of the phase-folded light curve.
-    duration_left : float
-        Transit duration measured from the left side of the phase-folded light curve.
-    duration_right : float
-        Transit duration measured from the right side of the phase-folded light curve.
-    original_depth : float
-        The original transit depth estimated from the full light curve.
-    original_duration : float
-        The original transit duration estimated from the full light curve.
-    snr : float (optional)
-        Signal-to-noise ratio of the transit event (default=None).
-
-    Returns:
-    -------
-    pass_fail : str
-        'passed' if the symmetry metrics are within the thresholds, 'Fail' otherwise.
-    """
-    depth_left = metrics['Depth Left'].item()
-    depth_right = metrics['Depth Right'].item()
-    duration_left = metrics['Duration Left'].item()
-    duration_right = metrics['Duration Right'].item()
-    original_depth = metrics['Depth'].item()
-    original_duration = metrics['Duration'].item()
-
-    # Set thresholds (adjust these values as necessary based on your criteria)
-#         depth_threshold = 0.05   # 5% for depth
-#         duration_threshold = 0.25  # 25% for duration
-#         combined_threshold = 0.15  # 15% for combined metric (NOT SURE ABOUT THIS...)
-
-#         depth_threshold = 1/100 * metrics['Depth'].item()/ metrics['Depth std'].item()
-#         duration_threshold = 1/100 * metrics['Duration'].item()/ metrics['Duration std'].item()
-
-#         depth_threshold = 1.5 * metrics['Depth'].item()
-#         duration_threshold = 1.5 * metrics['Duration'].item()        
-#         depth_threshold = 3 * metrics['Depth std'].item()        
-
-
-
-    depth_threshold = 3 * np.sqrt( (metrics['Depth Left std'].item())**2 + (metrics['Depth Right std'].item())**2 )
-#         duration_threshold = 5 * np.sqrt( (metrics['Duration Left std'].item())**2 + (metrics['Duration Right std'].item())**2 )
-#         duration_threshold = 1 * (metrics['Duration'].item())
-    qtran_threshold = 10/100 #10%
-
-#         combined_threshold = 
-
-    # Calculate symmetry metrics
-    #avg_depth = (depth_left + depth_right) / 2
-    #avg_duration = (duration_left + duration_right) / 2
-
-    symmetry_depth_metric = metrics['Symmetry Depth Metric'].item()
-    symmetry_duration_metric = metrics['Symmetry Duration Metric'].item()
-    symmetry_qtran_metric = metrics['symmetry_qtran_metric'].item()
-
-    # Check if metrics pass the thresholds
-    if symmetry_depth_metric <= depth_threshold:
-        pass_fail = 'passed'
-        operation1 = "<="
-        print(f"Symmetry Depth Metric: {symmetry_depth_metric:.4f} {operation1} threshold: {depth_threshold}, {pass_fail}")
-
-#             if symmetry_duration_metric >= duration_threshold:
-        if symmetry_qtran_metric >= qtran_threshold:
-            pass_fail = "failed"
-            operation2 = '>='
-#                 print(f"Symmetry Duration Metric: {symmetry_duration_metric:.4f}  {operation2} threshold: {duration_threshold}, {pass_fail}")
-            print(f"Symmetry qtran Metric: {symmetry_qtran_metric:.4f}  {operation2} threshold: {qtran_threshold}, {pass_fail}")
-        else:
-            operation2 = '<'
-            print(f"Symmetry qtran Metric: {symmetry_qtran_metric:.4f}  {operation2} threshold: {qtran_threshold}, passed")
-    else:
-        pass_fail = "failed"
-        operation1 = '>'
-        print(f"Symmetry Depth Metric: {symmetry_depth_metric:.4f}  {operation1} threshold: {depth_threshold}, {pass_fail}")
-        if symmetry_qtran_metric >= qtran_threshold:
-            pass_fail = "failed"
-            operation2 = '>='
-#                 print(f"Symmetry Duration Metric: {symmetry_duration_metric:.4f}  {operation2} threshold: {duration_threshold}, {pass_fail}")
-            print(f"Symmetry qtran Metric: {symmetry_qtran_metric:.4f}  {operation2} threshold: {qtran_threshold}, {pass_fail}")
-        else:
-            operation2 = '<'
-            print(f"Symmetry qtran Metric: {symmetry_qtran_metric:.4f}  {operation2} threshold: {qtran_threshold}, passed")
-    print(' ')
-    print('pass_fail:',pass_fail)
-    print(' ')
-
-    return pass_fail, operation1, operation2, float(depth_threshold), float(qtran_threshold)
-
+#
 def check_transit_symmetry(
     metrics,
     snr=None,
@@ -26326,14 +23170,6 @@ def mirror_and_model_left_right_transit(ID,Sector,input_LC,
         metrics, left_phases,left_fluxes , right_phases,right_fluxes = compare_to_model(phase, flux, 
                                                                                         model_phase, model_flux,
                                                                                         transit_results_df)
-        #    
-        # OLD
-    #     symmetry_flag, operation1, operation2, depth_threshold,qtran_threshold = check_transit_symmetry(metrics, snr=None)    
-    #     symmetry_depth_metric = metrics['Symmetry Depth Metric'].item()
-    #     symmetry_duration_metric = metrics['Symmetry Duration Metric'].item()
-    #     symmetry_qtran_metric = metrics['symmetry_qtran_metric'].item()    
-    #     metrics['Symmetry Depth threshold'] = depth_threshold
-    #     metrics['Symmetry qtran threshold'] = qtran_threshold
         symmetry_flag, operation1, operation2, depth_threshold, qtran_threshold = check_transit_symmetry(metrics, snr=None)
         # check_transit_symmetry now mutates metrics to add:
         #   'Symmetry Depth SNR', 'Symmetry qtran SNR',
@@ -26344,12 +23180,6 @@ def mirror_and_model_left_right_transit(ID,Sector,input_LC,
         # Extract the new SNR values (written by check_transit_symmetry)
         depth_SNR = metrics.get('Symmetry Depth SNR', np.nan)
         qtran_SNR = metrics.get('Symmetry qtran SNR', np.nan)
-
-
-
-        #return metrics, pass_fail    
-
-
         #pack left,right mirrors for later plotting
         orig_mirror_left = [left_phases,left_fluxes]
         orig_mirror_right = [right_phases,right_fluxes]
@@ -26385,7 +23215,7 @@ def mirror_and_model_left_right_transit(ID,Sector,input_LC,
         return nan_symmetry_result()
 #
 #
-#sometimes has IndexError issues with CDPP_in_transit, CDPP_out_of_transit (deque???)
+#
 def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmodel_df,verbose):
     """
 
@@ -26433,7 +23263,6 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
     #
     # compare noise in transit versus out of transit
     timescale=1.0/24.0
-#     cad=np.nanmedian(np.diff(T))
     cad = np.nanmedian(np.diff(T[np.isfinite(T)]))
     CDPP_LC = CDPP(T,F,E,'median','ppm',cad,binsize=timescale) # in ppo per sqrt timescale
     CDPP_in_transit = CDPP(T[intransit],F[intransit],E[intransit],\
@@ -26446,10 +23275,6 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
     else:
         CDPP_flag='passed'
     #
-    #
-    #
-    ###
-    #this is like Multiple Event Statistic (MES)
     SNR = np.sqrt(N_transits)*Depth / CDPP(T[~intransit],F[~intransit],E[~intransit],'median','ppo',cad,binsize=timescale)
     #
     if np.isnan(SNR) or SNR < 7:
@@ -26461,7 +23286,6 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
     # point to point in/out transit metric 
     pf,ff = phasefold(T0,T,Period,F)
     m = np.abs(pf*24) < 5*duration*24
-#     maskedpf,maskedff = fullphasefold(T0,maskedT,Period,maskedF,offset=0.5)
     maskedpf,maskedff = phasefold(T0,maskedT,Period,maskedF)
     #
     numerator=[]
@@ -26476,44 +23300,11 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
     #
     P2P_in_out = np.sqrt(num_sum / denom_sum)
     #
-    # NOT SO SURE ABOUT THIS ONE... Used in DIAmante
-    # but I don't have an intuition about what's a good
-    # automated rejection criteria for this metric
-    #
-    # point to point symmetry metric
-#     abspf, absff = pf,ff
-#     pf2 = np.abs(pf)
-#     m2 = np.abs(pf2*24) < 5*duration*24
-#     abspf, absff = pf2[m2],ff[m2]
-#     #
-#     #
-#     absnumerator = []
-#     for k in range(len(abspf)-1):
-#         absnumerator = np.append(absnumerator, absff[k] - absff[k-1])
-#     absdenominator=[]
-#     for l in range(len(pf)-1):
-#         absdenominator = np.append(absdenominator, ff[i] - ff[l-1])
-#     abs_num_sum = np.sum(absnumerator**2)
-#     abs_denom_sum = np.sum(absdenominator**2)
-#     P2P_symmetry = np.sqrt(abs_num_sum / abs_denom_sum)
-    #
-    #return dataframe with metrics
-#     vet_df = pd.DataFrame({'odd_even_mismatch':O_E_mismatch,'odd_even_mismatch_flag':O_E_mismatch_flag,\
-#                            'SNR':SNR,'SNR_flag':SNR_flag,\
-#                            'P2P_in_vs_out':P2P_in_out,'P2P_symmetry':P2P_symmetry,\
-#                           'CDPP_in_transit':CDPP_in_transit,'CDPP_out_of_transit':CDPP_out_of_transit,\
-#                           'CDPP_ratio':CDPP_ratio,'CDPP_flag':CDPP_flag},
-#                           index=[0])
-    #
-    #don't really have a feel for intuition about P2P_symmetry, let's use our symmetry test instead
-    #
     import pandas as pd
     input_LC = pd.DataFrame({'Time':T,'Flux':F,'Error':E})
-    #mirror_tests = mirror_and_model_left_right_transit(ID,Sector,input_LC,transit_results_df,verbose)
     mirror_tests = mirror_and_model_left_right_transit(ID,Sector,input_LC, 
                                                        transit_results_df,BLSorTLSmodel_df,
                                                        verbose)
-#     symmetry_depth_metric,symmetry_depth_duration_metric,symmetry_flag,operation1,operation2,mirror_left,mirror_right, depth, depthL,depthR = mirror_tests
     (symmetry_depth_metric, symmetry_qtran_metric, symmetry_flag,
      operation1, operation2,
      mirror_left, mirror_right,
@@ -26524,8 +23315,6 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
     #
     # 
     q_transit = transit_results_df['q_transit'].item()
-#     if  (q_transit > 0.001) & (q_transit < 0.1):
-
     if np.isnan(q_transit) or not (0.001 < q_transit < 0.1):
         q_transit_flag = 'failed'
     else:
@@ -26537,27 +23326,7 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
         a_over_R_star_flag = 'failed'
     else:
         a_over_R_star_flag = 'passed'
-    #
-#     vet_df_OLD = pd.DataFrame({
-#         'odd_even_mismatch': O_E_mismatch,
-#         'odd_even_mismatch_flag': O_E_mismatch_flag,
-#         'SNR': SNR,
-#         'SNR_flag': SNR_flag,
-#         'symmetry_depth_metric': symmetry_depth_metric,
-#         'symmetry_depth_threshold': depth_threshold,
-#         'symmetry_qtran_metric': symmetry_qtran_metric,
-#         'symmetry_qtran_threshold': qtran_threshold,
-#         'symmetry_flag': symmetry_flag,
-#         'CDPP_in_transit': CDPP_in_transit,
-#         'CDPP_out_of_transit': CDPP_out_of_transit,
-#         'CDPP_ratio': CDPP_ratio,
-#         'CDPP_flag': CDPP_flag,
-#         'a_over_R_star': a_over_R_star,
-#         'a_over_R_star_flag': a_over_R_star_flag,
-#         'q_transit': q_transit,
-#         'q_transit_flag': q_transit_flag
-#     }, index=[0])
-    
+        
     vet_df = pd.DataFrame({
         'odd_even_mismatch': O_E_mismatch,
         'odd_even_mismatch_flag': O_E_mismatch_flag,
@@ -26589,251 +23358,6 @@ def in_versus_out_of_transit_test(ID,Sector,LC_df,transit_results_df,BLSorTLSmod
     return vet_df, mirror_left,mirror_right, orig_mirror_left,orig_mirror_right, appended_transit_results
 #
 #
-#
-def centroid_analysis_OLD(ID,Sector,hdu, LC_df,transit_results_df,ax1,ax2,ax3,ax4,verbose=False):
-    """
-
-    Input Parameters
-    ----------
-
-    Returns
-    -------
-        *
-    """      
-    # NOT REALLY USED (see x=x-x, y=y-y)
-    #x=hdu[1].header['1CRPX4']-0.5 #should this be -0.5, -1, or nothing?????
-    #y=hdu[1].header['2CRPX4']-0.5 #should this be -0.5, -1, or nothing?????
-    #reference_pixel=[x,y]
-    #
-    centx_orig = LC_df['Centroid X Positions'].to_numpy(dtype=np.float64)#-x
-    centy_orig = LC_df['Centroid Y Positions'].to_numpy(dtype=np.float64)#-y
-    #
-    #make it in units of pixels instead of pixel positions
-    x=0
-    y=0
-    centx = centx_orig - np.nanmedian(centx_orig)
-    centy = centy_orig - np.nanmedian(centy_orig)
-    #OLD
-    sigmalimx = 5*np.nanstd(centx_orig)
-    sigmalimy = 5*np.nanstd(centy_orig)
-    #NEW
-    import astropy.units as u
-    try:
-        Period = transit_results_df['TLS Period [d]'].item()
-        T0 = transit_results_df['TLS TC [BTJD]'].item()
-        duration = (transit_results_df['TLS Dur [hrs]'].item()*u.hour).to(u.day).value # in days
-        Depth=transit_results_df['TLS depth [ppt]'].item()/1e3
-    except KeyError:
-        Period = transit_results_df['BLS Period [d]'].item()
-        T0 = transit_results_df['BLS TC [BTJD]'].item()
-        duration = (transit_results_df['BLS Dur [hrs]'].item()*u.hour).to(u.day).value #in days
-        Depth=transit_results_df['BLS depth [ppt]'].item()/1e3  
-    XLIM = 3.5*duration
-#     pfx,xx = phasefold(T0, LC_df['Time'].to_numpy(),Period,centx)
-#     pfy,yy = phasefold(T0, LC_df['Time'].to_numpy(),Period,centy)    
-#     mx = np.where(np.abs(pfx)<XLIM)
-#     my = np.where(np.abs(pfy)<XLIM)
-#     sigmalimx = 5*np.nanstd(xx[mx].astype('float32'))
-#     sigmalimy = 5*np.nanstd(yy[my].astype('float32'))
-    #
-    #
-    flux = LC_df['Detrended Flux'].to_numpy(dtype=np.float64)
-    time = LC_df['Time'].to_numpy(dtype=np.float64)
-    xmin,xmax = np.nanmean(centx)-3*np.nanstd(centx),np.nanmean(centx)+3*np.nanstd(centx)
-    ymin,ymax = np.nanmean(centy)-3*np.nanstd(centy),np.nanmean(centy)+3*np.nanstd(centy)
-    ###
-    radius=np.sqrt(sigmalimx**2+sigmalimy**2) #5 sigma
-    radius1sig=np.sqrt((1*np.nanstd(centx))**2+(1*np.nanstd(centy))**2)
-    radius3sig=np.sqrt((3*np.nanstd(centx))**2+(3*np.nanstd(centy))**2)
-    #
-    #use parametric equation for circle
-    angle = np.linspace( 0 , 2 * np.pi , 100 )
-    circx = radius * np.cos( angle )
-    circy = radius * np.sin( angle )
-    circx1sig = radius1sig * np.cos( angle )
-    circy1sig = radius1sig * np.sin( angle )
-    circx3sig = radius3sig * np.cos( angle )
-    circy3sig = radius3sig * np.sin( angle )
-    leg = r'r = 5$\sigma$'
-    leg1sig = r'r = 1$\sigma$'
-    leg3sig = r'r = 3$\sigma$'
-    circ1,=ax1.plot(circx,circy,'b-',label=leg,zorder=-10)
-    circ2,=ax1.plot(circx3sig,circy3sig,'g-',label=leg3sig,zorder=-10)
-    circ3,=ax1.plot(circx1sig,circy1sig,'r-',label=leg1sig,zorder=-10)
-    ax1.plot(centx,centy,'k.',zorder=10)
-    if np.nanmedian(centx)==0:
-        ax1.plot(x,y,'rX',markersize=10,zorder=9)
-    else:
-        ax1.plot(x,y,'rX',markersize=10,zorder=11)
-    #
-    ax1.set_xlabel(r'$\Delta X$ [pixels]')
-    ax1.set_ylabel(r'$\Delta Y$ [pixels]')
-    ax1.axis("equal")
-#     ax1.axis("auto")
-    try:  #if this pops up, centroid positions are all NaNs for some reason...
-        ax1.set_xlim(0-1.05*radius,0+1.05*radius) #problem with radius??? related to centroids...
-        ax1.set_ylim(0-1.05*radius,0+1.05*radius)
-    except ValueError:
-        ax1.set_ylim(-3,3)
-        ax1.set_xlim(-3,3)
-        ax1.text(-1 , 0.5, 'Problems with Centroiding', horizontalalignment='center', verticalalignment='center', transform=ax1.transData)
-#     legend=ax1.legend(loc='upper right',handletextpad=0.025,borderaxespad=0,borderpad=0,numpoints=1,markerscale=0.3)
-    #
-    handles = [plt.plot([],marker='.',ls='none', color='blue',zorder=10)[0],\
-               plt.plot([],marker='.',ls='none', color='green',zorder=10)[0],\
-               plt.plot([],marker='.',ls='none', color='red',zorder=10)[0]]
-    #
-    labels = [circ1.get_label(),circ2.get_label(),circ3.get_label()]
-    #
-    ax1.legend(handles = handles,labels=labels,loc='upper right',handletextpad=0.01,\
-               borderaxespad=0,borderpad=0,numpoints=1,markerscale=1,labelspacing=0.1,\
-               handlelength=1)
-#     for i in legend.legendHandles:
-#         i.set_linewidth(1)
-#     plt.show()
-    #
-    #
-    pfx,ffx = fullphasefold(time,T0,Period,centx,offset=0.25)
-    pfy,ffy = fullphasefold(time,T0,Period,centy,offset=0.25)
-    pf,ff = fullphasefold(time,T0,Period,flux,offset=0.25)
-    
-    
-    mx = np.where(np.abs(pfx)<XLIM)
-    my = np.where(np.abs(pfy)<XLIM)
-    
-    # now do student t-test to see if there is statistically significant cetroid motion
-    # during transit versus out of transit
-    from transitleastsquares import transit_mask
-    intransit = transit_mask(LC_df['Time'].to_numpy(dtype=np.float64), Period, 3 * duration, T0)
-    #
-    pfxin, ffxin = fullphasefold( LC_df['Time'].to_numpy(dtype=np.float64)[intransit],T0,Period,centx[intransit],offset=0.25)
-    pfxout,ffxout = fullphasefold(LC_df['Time'].to_numpy(dtype=np.float64)[~intransit],T0,Period,centx[~intransit],offset=0.25)
-    pfyin, ffyin = fullphasefold( LC_df['Time'].to_numpy(dtype=np.float64)[intransit],T0,Period,  centy[intransit],offset=0.25)
-    pfyout,ffyout = fullphasefold(LC_df['Time'].to_numpy(dtype=np.float64)[~intransit],T0,Period,centy[~intransit],offset=0.25)
-    #
-    #
-    # calculate standard score by standardizing to out of transit flux
-    if np.nanstd(ffxout)==0:
-        zin_scorex=0
-    else:
-        zin_scorex = np.abs(np.nanmin(ffxin) - np.nanmedian(ffxout)  ) / np.nanstd(ffxout)
-    if np.nanstd(ffyout)==0:
-        zin_scorey=0
-    else:
-        zin_scorey = np.abs(np.nanmin(ffyin) - np.nanmedian(ffyout)  ) / np.nanstd(ffyout)
-    #
-    #
-    zin_score = np.nanmean([zin_scorex,zin_scorey])
-    if np.isnan(zin_score)==True:
-        if verbose==True:
-            print('Significant centroid motion: zscore ',zin_score,'is nan!')
-        pval_flag='failed'        
-    if (zin_score < 3) & (np.isnan(zin_score)==False):
-        if verbose==True:
-            print('No significant centroid motion: zscore ',zin_score,'<',3)
-        pval_flag='passed'
-    else:
-        if verbose==True:
-            print('Significant centroid motion: zscore ',zin_score,'>',3)
-        pval_flag='failed'
-    pvalue= zin_score
-    #
-    #
-    #
-    ax2.axhline(y=np.nanmedian(ffxout),color='green')
-    ax2.axhline(y=np.nanmedian(ffxout)-3*np.nanstd(ffxout),color='red')
-    ax2.axhline(y=np.nanmin(ffxin),color='cyan',linestyle='--')
-    #
-    ax3.axhline(y=np.nanmedian(ffyout),color='green')
-    ax3.axhline(y=np.nanmedian(ffyout)-3*np.nanstd(ffyout),color='red')
-    ax3.axhline(y=np.nanmin(ffyin),color='cyan',linestyle='--')
-    ax2.plot(pfx,ffx,'k.')
-    ax3.plot(pfy,ffy,'k.')
-    ax4.plot(pf,ff,'k.')
-    #
-    ax2.axvline(x=0.25,color='green',zorder=-10)
-    ax3.axvline(x=0.25,color='green',zorder=-10)
-    ax4.axvline(x=0.25,color='green',zorder=-10)
-    ax2.axvline(x=0.5,color='green',zorder=-10)
-    ax3.axvline(x=0.5,color='green',zorder=-10)
-    ax4.axvline(x=0.5,color='green',zorder=-10)
-    ax2.axvline(x=0.75,color='green',zorder=-10)
-    ax3.axvline(x=0.75,color='green',zorder=-10)
-    ax4.axvline(x=0.75,color='green',zorder=-10)
-    #
-#     ax2.axhline(y=x)
-#     ax3.axhline(y=y)
-    for N in [1,3,5]:
-        if N==1:
-            c='red'
-        if N==3:
-            c='green'
-        if N==5:
-            c='blue'
-        ax2.axhline( y=+N*np.nanstd(ffx[mx].astype('float32')),color=c,
-                    linestyle='-',alpha=0.5,zorder=-10)
-        ax2.axhline( y=-N*np.nanstd(ffx[mx].astype('float32')),color=c,
-                    linestyle='-',alpha=0.5,zorder=-10)
-        ax3.axhline( y=+N*np.nanstd(ffy[my].astype('float32')),color=c,
-                    linestyle='-',alpha=0.5,zorder=-10)
-        ax3.axhline( y=-N*np.nanstd(ffy[my].astype('float32')),color=c,
-                    linestyle='-',alpha=0.5,zorder=-10)
-    try:
-        ax2.set_ylim(-7*np.nanstd(ffx),7*np.nanstd(ffx))
-        ax3.set_ylim(-7*np.nanstd(ffy),7*np.nanstd(ffy))
-    except ValueError:
-        ax2.set_ylim(-3,3)
-        ax2.set_xlim(-0.25,1.25)
-        ax2.text(0.25 , 0.5, 'Problems with Centroiding', horizontalalignment='center', verticalalignment='center', transform=ax2.transData)
-        ax3.set_ylim(-3,3)
-        ax3.set_xlim(-0.25,1.25)
-        ax3.text(0.25 , 0.5, 'Problems with Centroiding', horizontalalignment='center', verticalalignment='center', transform=ax2.transData)        
-    #
-    YLIM=2*Depth    
-    Nstds=5
-    mask1= np.where(np.abs(pf)< 3*duration)
-    if 1-YLIM > np.nanmedian(ff[mask1])-Nstds*np.nanstd(ff[mask1]):
-        ymin=np.nanmedian(ff[mask1])-Nstds*np.nanstd(ff[mask1])
-    else:
-        ymin=1-YLIM
-    if 1+YLIM < np.nanmedian(ff[mask1])+Nstds*np.nanstd(ff[mask1]):
-        ymax=np.nanmedian(ff[mask1])+Nstds*np.nanstd(ff[mask1])
-    else:
-        ymax=1+YLIM            
-    #ax4.set_ylim(np.nanmedian(ff)-5*np.nanstd(ff),np.nanmedian(ff)+5*np.nanstd(ff))
-    ax4.set_ylim(ymin,ymax)
-    #
-    #
-    ax2.set_xlabel('Phase + offset = 0.25')
-    ax3.set_xlabel('Phase + offset = 0.25')
-    ax4.set_xlabel('Phase + offset = 0.25')
-    ax2.set_ylabel(r'$\Delta X$ [pixels]')
-    ax3.set_ylabel(r'$\Delta Y$ [pixels]')
-    ax4.set_ylabel('Normalized Flux')
-    Nbad_centx = len(np.where(centx>sigmalimx)[0]) #SHOULD THIS BE abs(centx)????
-    Nbad_centy = len(np.where(centy>sigmalimy)[0]) #SHOULD THIS BE abs(centy)????
-    if ((Nbad_centx)>1) or ((Nbad_centy)>1) or (np.isnan(zin_score)==True):
-        print('zin_score',zin_score)
-        print('Nbad_centx',Nbad_centx,'\nNbad_centy',Nbad_centy,'\n')
-        LW=3
-        for ax in [ax2, ax3, ax4]:
-            for axis in ['top', 'bottom', 'left', 'right']:
-                ax.spines[axis].set_color('red')
-                ax.spines[axis].set_linewidth(LW)
-
-        ax2.set_title('Centroid Analysis Result: failed ',color='red')
-    else:
-        ax2.set_title('Centroid Analysis Result: passed',color='black')
-    if pval_flag=='failed':
-#     if ((Nbad_centx)<1) or ((Nbad_centy)<1): #for testing
-            LW=3
-            for ax in [ax2, ax3, ax4]:
-                for axis in ['top', 'bottom', 'left', 'right']:
-                    ax.spines[axis].set_color('red')
-                    ax.spines[axis].set_linewidth(LW)
-            ax2.set_title('Centroid Analysis Result: failed (score > 3!) ',color='red')
-    ###
-    return pvalue,pval_flag
 #
 def centroid_analysis(
     ID,
@@ -27153,7 +23677,6 @@ def centroid_analysis(
 #
 #
 #
-#sometimes has IndexError issues with CDPP_in_transit, CDPP_out_of_transit (deque???)
 def plot_mirrored_transits_and_collect_vetting_metrics(ID,Sector,LC_df,
                                                        transit_results_df,
                                                        BLSorTLSmodel_df,
@@ -27283,7 +23806,6 @@ def plot_mirrored_transits_and_collect_vetting_metrics(ID,Sector,LC_df,
 #
 #
 #
-#
 def plot_page3_text(ID,Sector,LC_df,appended_transit_results,fig):
     """
 
@@ -27295,14 +23817,7 @@ def plot_page3_text(ID,Sector,LC_df,appended_transit_results,fig):
         *
     """      
     vet_header='Automated Vetting Test Results \n         for TIC '+str(ID) 
-
-#     vet_txt_array_OLD=['odd_even_mismatch', 'odd_even_mismatch_flag', 'SNR', 'SNR_flag',\
-#                    'symmetry_depth_metric','symmetry_qtran_metric', 'symmetry_flag',\
-#                    'CDPP_in_transit', 'CDPP_out_of_transit','CDPP_ratio','CDPP_flag',\
-#                    'centroid_motion_score','centroid_motion_flag',\
-#                    'a_over_R_star','a_over_R_star_flag',\
-#                   'q_transit','q_transit_flag']
-    
+    #
     vet_txt_array=['odd_even_mismatch', 'odd_even_mismatch_flag', 'SNR', 'SNR_flag',\
                    'symmetry_depth_metric','symmetry_qtran_metric',
                    'symmetry_depth_SNR','symmetry_qtran_SNR', 'symmetry_flag',\
@@ -27357,16 +23872,12 @@ def plot_page3_text(ID,Sector,LC_df,appended_transit_results,fig):
                 left_text_values = np.append(left_text_values, np.round(vet_df['CDPP_ratio'].item(),3))                            
         else:    
             left_text_values = np.append(left_text_values,np.round(vet_df[l].item(),3))
-#     if verbose==True:
-#         print('left len check',len(left_text),len(left_text_values))
     
     right_text = ['odd_even_mismatch_flag','SNR_flag','symmetry_flag','CDPP_flag',
                   'centroid_motion_flag','a_over_R_star_flag','q_transit_flag']
     right_text_values = []    
     for r in right_text:
         right_text_values = np.append(right_text_values,vet_df[r].item())
-#     if verbose==True:        
-#         print('right len check',len(right_text),len(right_text_values))
     
     vertspacing=0.035
     horispacing=0.875
@@ -27651,13 +24162,6 @@ def Vetting_Report_4th_page(ID,Sector,LC_df,hdu, path, cadence,
     ax3b = fig.add_subplot(gs1[1, right])
     ax3c = fig.add_subplot(gs1[2, right])
     #
-#     pvalue,pval_flag= centroid_analysis(ID,Sector,hdu,LC_df,transit_results_df,ax1,ax2a,ax2b,ax2c,verbose=verbose)
-#     #
-#     appended_transit_results = plot_mirrored_transits_and_collect_vetting_metrics(ID,Sector,LC_df,
-#                                                                                   transit_results_df,
-#                                                                                   BLSorTLSmodel_df,
-#                                                                                   ax3a,ax3b,ax3c,
-#                                                                                   verbose)
     try:
         pvalue, pval_flag = centroid_analysis(
             ID, Sector, hdu, LC_df, transit_results_df,
@@ -27717,36 +24221,6 @@ def Vetting_Report_4th_page(ID,Sector,LC_df,hdu, path, cadence,
 #
 #
 #
-#
-def all_transit_times_OLD(T0, t, period): # this only walks forward from T0
-    """
-    Return all mid-transit times within t
-    Input Parameters
-    ----------
-
-    Returns
-    -------
-        *
-    """      
-    #stolen from TLS source code and repurposed
-    import numpy
-    #
-    if T0 < min(t):
-        transit_times = [T0 + period]
-    else:
-        transit_times = [T0]
-    previous_transit_time = transit_times[0]
-    transit_number = 0
-    while True:
-        transit_number = transit_number + 1
-        next_transit_time = previous_transit_time + period
-        if next_transit_time < (numpy.min(t) + (numpy.max(t) - numpy.min(t))):
-            transit_times.append(next_transit_time)
-            previous_transit_time = next_transit_time
-        else:
-            break
-    return transit_times
-
 def all_transit_times(T0, t, period):
     """
     Return all predicted mid-transit times within the time span of t.
@@ -27865,218 +24339,7 @@ def safe_panel_normalization(
 
     return norm_flux, norm_err, scale
 #
-def Vetting_Report_5th_page_plot_individual_transits_OLD(ID, Sector, cadence, LC_df, path,
-                                                     bestfit_df, model_df, BLSorTLS,
-                                                     default_settings,
-                                                     max_panels: int = 9, n_dur_window: float = 3.5,
-                                                    ):
-    """
-    Produce page 5 of the NEMESIS vetting report: individual transit zoom-ins.
-
-    Plots up to ``max_panels`` individual transit events in chronological
-    order, each centred on the predicted mid-transit time with a
-    ``± n_dur_window × duration`` window.  Panels where no in-window data
-    exist are shown with the dashed model and a "No transit data!" label.
-    If the total number of predicted transits exceeds ``max_panels``, only
-    the first ``max_panels`` are shown and the suptitle notes the total count.
-
-    Changes vs. original
-    --------------------
-    1. Fixed time-chunk unit bug: was ``3 × duration × 24`` (days not hours),
-       now ``n_dur_window × duration`` (days), matching LC time units.
-    2. Data-gap panels show the dashed model in addition to the text label.
-    3. Figure size (12×10) and ``tight_layout`` match the other report pages.
-
-    Parameters
-    ----------
-    ID : int
-        TIC identifier; used for figure title and output filename.
-    Sector : int, list, or None
-        Sector(s) processed; used for output filename and sector label lookup.
-    cadence : str
-        TESS exposure cadence string; used to label TPF vs FFI in the title.
-    LC_df : pd.DataFrame
-        Final processed light curve.  Required columns:
-        ``Time``, ``Detrended Flux``, ``Detrended Error``.
-    path : str
-        Base path (passed through; not directly used here).
-    bestfit_df : pd.DataFrame
-        Best-fit parameter DataFrame (BLS or TLS); auto-detected via column
-        names.  Provides ``Period``, ``TC``, ``Dur [hrs]``,
-        ``Distinct Transit Count``, and ``depth [ppt]``.
-    model_df : pd.DataFrame
-        Best-fit model DataFrame with columns ``Time`` and ``Model``.
-    BLSorTLS : str
-        ``'BLS'`` or ``'TLS'``; selects the report directory.
-    default_settings : dict
-        NEMESIS settings dict.  Consumed keys: ``get_all_sectors``,
-        ``verbose``, ``saveReportpath_BLS``, ``saveReportpath_TLS``.
-    max_panels : int, optional
-        Maximum number of transit panels to show.  Default is ``9``
-        (3×3 grid).
-    n_dur_window : float, optional
-        Half-width of each panel in units of transit duration.
-        Default is ``3.5``.
-
-    Returns
-    -------
-    None
-        Figure saved to disk as:
-        ``{saveReportpath}/TIC_{ID}_{sector_tag}_{BLS|TLS}_Report_page5.png``
-    """
-    import math
-    import numpy as np
-    import pandas as pd
-    import astropy.units as u
-    import matplotlib.pyplot as plt
-    import matplotlib.gridspec as gridspec
-
-    # ── settings ──────────────────────────────────────────────────────────────
-    get_all_sectors = default_settings.get('get_all_sectors')
-    verbose         = default_settings.get('verbose')
-
-    if BLSorTLS == 'TLS':
-        report_dir_name_suffix = 'TLS_Report'
-        saveReportpath = default_settings.get('saveReportpath_TLS')
-    else:
-        report_dir_name_suffix = 'BLS_Report'
-        saveReportpath = default_settings.get('saveReportpath_BLS')
-
-    if get_all_sectors or Sector is None or not isinstance(Sector, int):
-        sector_tag = 'Multi_Sector'
-    else:
-        sector_tag = f'Sector_{Sector:04d}'
-
-    fs = 12
-
-    # ── best-fit parameters ───────────────────────────────────────────────────
-    try:
-        P       = bestfit_df['TLS Period [d]'].item()
-        T0      = bestfit_df['TLS TC [BTJD]'].item()
-        Dur_hrs = bestfit_df['TLS Dur [hrs]'].item()
-        N_distinct = int(bestfit_df['TLS Distinct Transit Count'].item())
-        Depth   = bestfit_df['TLS depth [ppt]'].item() / 1000
-    except KeyError:
-        P       = bestfit_df['BLS Period [d]'].item()
-        T0      = bestfit_df['BLS TC [BTJD]'].item()
-        Dur_hrs = bestfit_df['BLS Dur [hrs]'].item()
-        N_distinct = int(bestfit_df['BLS Distinct Transit Count'].item())
-        Depth   = bestfit_df['BLS depth [ppt]'].item() / 1000
-
-    duration   = (Dur_hrs * u.hour).to(u.day).value   # days
-    time_chunk = n_dur_window * duration               # days — FIX vs original
-
-    # ── LC and model DataFrames ───────────────────────────────────────────────
-    input_LC = pd.DataFrame({
-        'Time':  LC_df['Time'].to_numpy(dtype=float),
-        'Flux':  LC_df['Detrended Flux'].to_numpy(dtype=float),
-        'Error': LC_df['Detrended Error'].to_numpy(dtype=float),
-    })
-    model = pd.DataFrame({
-        'Time':  model_df['Time'].to_numpy(dtype=float),
-        'Flux':  model_df['Model'].to_numpy(dtype=float),
-        'Error': np.nanstd(model_df['Model']) * np.ones(len(model_df)),
-    })
-
-    # ── all transit times, take first max_panels ──────────────────────────────
-    all_TCs   = np.asarray(all_transit_times(T0, input_LC.Time.to_numpy(), P))
-    N_total   = len(all_TCs)
-    tran_times = all_TCs[:max_panels]
-    n_panels   = len(tran_times)
-
-    # ── figure layout (12×10 to match other Vetting Report pages) ─────────────
-    N_desired_cols = 3
-    N_desired_rows = math.ceil(n_panels / N_desired_cols)
-    N_desired_rows = max(N_desired_rows, 1)
-
-    fig = plt.figure(figsize=(12, 10))
-    gs1 = gridspec.GridSpec(N_desired_rows, N_desired_cols)
-
-    if get_all_sectors or Sector is None or not isinstance(Sector, int):
-        title_str = f'TIC {ID} Multi Sector individual distinct transits'
-    else:
-        title_str = f'TIC {ID} Sector {_sec_str(Sector)} individual distinct transits'
-
-    if N_total > max_panels:
-        title_str += f' (showing first {n_panels} of {N_total})'
-
-    fig.suptitle(title_str, x=0.55, y=1.02, weight='bold', fontsize=fs)
-
-    xlim_hrs = n_dur_window * Dur_hrs   # x-axis half-width in hours
-
-    # ── sector list for label lookup ──────────────────────────────────────────
-    if get_all_sectors or Sector is None or not isinstance(Sector, int):
-        Sectors = search_sectors_from_filetype_and_path(ID, default_settings)
-    else:
-        Sectors = Sector
-
-    # ── per-transit panels ────────────────────────────────────────────────────
-    for num, t0temp in enumerate(tran_times):
-        lctemp    = cut_around_T0(t0temp, input_LC, time_chunk)
-        modeltemp = cut_around_T0(t0temp, model,    time_chunk)
-
-        lc_hrs    = 24.0 * (lctemp.Time.to_numpy()    - t0temp)
-        model_hrs = 24.0 * (modeltemp.Time.to_numpy() - t0temp)
-        lc_flux   = lctemp.Flux.to_numpy()
-
-        mcheck    = np.where(np.abs(lc_hrs) < xlim_hrs)[0]
-        has_data  = len(mcheck) > 0
-
-        ax = fig.add_subplot(gs1[num])
-
-        if has_data:
-            ax.plot(lc_hrs, lc_flux / np.nanmedian(lc_flux),
-                    'k.', zorder=1, rasterized=True, markersize=4)
-            if len(model_hrs) > 0:
-                ax.plot(model_hrs, modeltemp.Flux.to_numpy() / np.nanmedian(modeltemp.Flux.to_numpy()),
-                        'r-', linewidth=0.5, zorder=2, rasterized=True)
-        else:
-            # no data: draw expected model dashed so the shape is still visible
-            if len(model_hrs) > 0:
-                ax.plot(model_hrs, modeltemp.Flux.to_numpy() / np.nanmedian(modeltemp.Flux.to_numpy()),
-                        'r--', linewidth=0.8, zorder=2, alpha=0.6, rasterized=True)
-            ax.text(0.5, 0.5, 'No transit data!',
-                    ha='center', va='center', transform=ax.transAxes,
-                    fontsize=fs - 1, weight='bold')
-
-        # ── sector label ──────────────────────────────────────────────────────
-        try:
-            sec_num = TESS_Sector_observation_check(T0=t0temp)
-            ax.text(0.03, 0.97, f'Sector {sec_num}',
-                    ha='left', va='top', zorder=2,
-                    fontsize=fs - 2, transform=ax.transAxes, weight='bold')
-        except Exception:
-            if type(Sectors) is int:
-                ax.text(0.03, 0.97, f'Sector {Sectors}',
-                        ha='left', va='top', zorder=2,
-                        fontsize=fs - 2, transform=ax.transAxes, weight='bold')
-
-        ax.set_xlabel(f'Hours from {np.round(t0temp, 5)} BTJD', fontsize=fs - 2)
-        ax.set_xlim(-xlim_hrs, xlim_hrs)
-        ax.tick_params(axis='x', labelsize=fs - 2)
-        ax.tick_params(axis='y', labelsize=fs - 2)
-        ax.ticklabel_format(useOffset=False)
-
-    # ── shared y-label ────────────────────────────────────────────────────────
-    fig.text(0.0, 0.5, 'Normalized Relative Flux',
-             ha='center', va='center', fontsize=fs, rotation='vertical',
-             transform=fig.transFigure)
-
-    fig.tight_layout(pad=1)
-    fig.set_size_inches(12, 10)
-
-    # ── save ──────────────────────────────────────────────────────────────────
-    page_num = 5
-    if get_all_sectors or Sector is None or not isinstance(Sector, int):
-        savepath = (saveReportpath + f'TIC_{ID}_Multi_Sector_'
-                    + report_dir_name_suffix + f'_page{page_num}.png')
-    else:
-        savepath = (saveReportpath + f'TIC_{ID}_{sector_tag}_'
-                    + report_dir_name_suffix + f'_page{page_num}.png')
-
-    fig.savefig(savepath, bbox_inches='tight')
-    plt.close()
-#    
+#
 def _per_transit_snr(
     t0: float,
     lc_time: np.ndarray,
@@ -28212,15 +24475,6 @@ def _select_transit_indices(
     else:
         mid_idx = mid_pool   # use whatever is left
 
-#     # Sort chronologically within each tier
-#     best_idx  = np.sort(best_idx)
-#     mid_idx   = np.sort(mid_idx)
-#     worst_idx = np.sort(worst_idx)
-    # Sort each tier by SNR (not chronologically):
-    #   BEST  : descending (highest SNR leftmost panel)
-    #   MID   : descending (consistent with BEST)
-    #   WORST : ascending  (lowest SNR leftmost panel)
-    # NaN-padded entries in worst_idx have no finite SNR; place them last.
     def _sort_by_snr(indices, ascending=False):
         if len(indices) == 0:
             return indices
@@ -28497,9 +24751,6 @@ def Vetting_Report_5th_page_plot_individual_transits(
         tier_badge, title_color, bg_color = _TIER_STYLE[int(tier)]
 
         if has_data:
-#             norm_med  = np.nanmedian(lc_fp)
-#             norm_flux = lc_fp  / norm_med
-#             norm_err  = lc_ep  / norm_med
             norm_flux, norm_err, norm_med = safe_panel_normalization(lc_fp, lc_ep)
 
             # In-transit vs. out-of-transit colouring
@@ -28568,25 +24819,6 @@ def Vetting_Report_5th_page_plot_individual_transits(
     for extra_i in range(N_desired_rows*N_desired_cols, N_desired_rows * N_desired_cols):
         ax_hide = fig.add_subplot(gs1[extra_i])
         ax_hide.set_visible(False)
-
-    # ── legend ────────────────────────────────────────────────────────────────
-#     if use_stratified:
-#         from matplotlib.patches import Patch
-#         legend_elements = [
-#             Patch(facecolor=_TIER_STYLE[0][2], edgecolor=_TIER_STYLE[0][1],
-#                   label=f'BEST (top {n_best} SNR)'),
-#             Patch(facecolor=_TIER_STYLE[1][2], edgecolor='gray',
-#                   label=f'MID ({n_mid} median SNR)'),
-#             Patch(facecolor=_TIER_STYLE[2][2], edgecolor=_TIER_STYLE[2][1],
-#                   label=f'WORST (bottom {n_worst} SNR)'),
-#             plt.Line2D([0], [0], marker='o', color='w',
-#                        markerfacecolor=_INTRANSIT_COLOR, ms=6,
-#                        label='in-transit cadences'),
-#         ]
-#         fig.legend(handles=legend_elements, loc='lower right',
-#                    bbox_to_anchor=(0.98, 0.01), fontsize=7.5,
-#                    framealpha=0.9, ncol=2)
-
     # ── save ──────────────────────────────────────────────────────────────────
     page_num = 5
     if get_all_sectors or Sector is None or not isinstance(Sector, int):
@@ -28602,17 +24834,6 @@ def Vetting_Report_5th_page_plot_individual_transits(
 #
 #
 #
-#
-# ====================================================================================
-# ====================================================================================
-# ====================================================================================
-# NEW 
-# LEO VETTER STUFFZ (had to rework a lot of metric tests to output strings)
-# LEO VETTER STUFFZ (had to rework a lot of metric tests to output strings)
-# LEO VETTER STUFFZ (had to rework a lot of metric tests to output strings)
-# LEO VETTER STUFFZ (had to rework a lot of metric tests to output strings)
-# reworked LEOvetter tools
-
 def get_scalar(value):
     """
     Coerce any scalar-like object to a plain Python scalar.
@@ -29496,15 +25717,7 @@ def unphysical_duration(metrics, thresholds, pad: int = 13, float_round: int=2):
         return f"{np.round(x, float_round)}" if np.isfinite(x) else str(x)
 
     f = lambda x: f"{np.round(x, float_round)}" if np.isfinite(x) else str(x)
-#    lines = [
-#        (f"transit_aRs: {f(transit_aRs)} < 1.5 or aRs: {f(aRs)} < 2"
-#         if low_aRs else
-#         f"transit_aRs: {f(transit_aRs)} >= 1.5 & aRs: {f(aRs)} >= 2"),
-#        (f"q/trap_qtran: {f(q_over_trap)} < 0.6 or sig_sec is NaN or trap_qtran: {f(trap_qtran)} > 0.5"
-#         if long_duration else
-#         f"q/trap_qtran: {f(q_over_trap)} >= 0.6 and sig_sec not NaN & trap_qtran: {f(trap_qtran)} <= 0.5"),
-#    ]
-#    output_string = format_conditions_block("unphysical_duration: ", lines, padding=pad)
+    #
     # Four short lines so the block fits the page 6 text column:
     # line 1 test name + first condition, lines 2-4 the remaining conditions,
     # indented under the first condition (padding=0 -> 21 spaces).
@@ -30502,7 +26715,6 @@ def plot_modshift_NEMESIS(ID, star, LC_df,
     phase, flux, deps = expanded_phase(tlc.phase, tlc.flux, tlc.dep_series)
     bin_cent, bin_mean, bin_err = binned_data(phase, flux, int(10 * 1.5 / tlc.qtran))
     # Set up plot
-#     fig = plt.figure(figsize=(6, 8))
     fig = plt.figure(figsize=(12, 10))
     fs = 10
     NC=5
@@ -30748,11 +26960,6 @@ def Vetting_Report_6th_page_LEOVetter(ID, nearby_star_catalog, Sector, cadence,
     else:
         print(saveReportpath + 'TIC_'+str(ID)+f'_{sector_tag}_'+BLSorTLS+'_bestfit.csv', 'file')
         bestfit_df_merged.to_csv(saveReportpath + 'TIC_'+str(ID)+f'_{sector_tag}_'+BLSorTLS+'_bestfit.csv')
-#
-#
-# ====================================================================================
-# ====================================================================================
-# ====================================================================================
 #
 #
 #
@@ -31042,13 +27249,6 @@ def Vetting_Report_multi_page(ID, nearby_star_catalog, Sector, cadence,
     gc.collect()
 #
 #
-###   
-###
-###   
-###################################
-###################################
-###################################
-#
 #
 def Transit_Pipeline(ID, nearby_star_catalog, Sector,
                      cadence, hdu, input_LC, default_settings,
@@ -31230,14 +27430,6 @@ def Transit_Pipeline(ID, nearby_star_catalog, Sector,
 
     if verbose:
         timer(start=start, end=clock.time(), message='BLS vetting reports took:')
-
-    # ── optional TLS search (only if BLS SDE exceeds threshold) ──────────────
-    #bls_peak_sde = np.nanmax(np.array(PowerSpectrum_df['BLS SDE']))
-
-    #if (bls_peak_sde >= SDE_threshold) and (do_TLS_Search is True):
-    #    if verbose:
-    #        print(f'\nBLS max SDE ({bls_peak_sde:.2f}) ≥ threshold — running TLS.\n')
-    #
     #
     if (PowerSpectrum_df is None) or ('BLS SDE' not in PowerSpectrum_df.columns):
         _sde_arr = np.array([], dtype=float)
@@ -31327,23 +27519,6 @@ def Transit_Pipeline(ID, nearby_star_catalog, Sector,
 #
 #
 #
-##########################################
-##########################################
-####### TRANSIT SEARCHING FUNCTIONS ######
-##########################################
-##########################################
-#
-#
-#
-#
-##########################################
-##########################################
-######### FULL PIPELINE FUNCTIONS ########
-##########################################
-##########################################
-#
-#
-# update docstrings
 def default_NEMESIS_pipeline_settings(return_dict: bool = True):
     """
     Return the default settings dictionary for the NEMESIS pipeline.
@@ -31458,7 +27633,7 @@ def default_NEMESIS_pipeline_settings(return_dict: bool = True):
         'use_circ':                         True,
         'use_sources_in_aperture':          False,
         'do_aperture_optimization':         False,
-        'plot_catalog_source':              'TIC', # or 'gaia'
+        #'plot_catalog_source':              'TIC', # or 'gaia'
         # PRF / aperture-method selection
 #         'aperture_selection_method':        'threshold',
         'aperture_auto_select':             False,
@@ -31740,40 +27915,7 @@ def cleanup(ID, cadence, Sector, default_settings):
         else:
             _sector_tag = f"Sector_{Sector:04d}"
             _rm_im_data_for_sector(f"TIC_{ID}_{_sector_tag}")
-
-#    -------------------------------------------------------------------------
-#     # keep_extra_files == False → clear astropy cache + top-level cache files (unchanged)
-#     # -------------------------------------------------------------------------
-#     if keep_extra_files is False:
-#         if verbose:
-#             print('removing all other extra NEMESIS files')
-#         import astropy
-#         try:
-#             astropy.utils.data.clear_download_cache()
-#         except Exception:
-#             pass
-
-#         # remove only files directly under cache_root (keep subdirs)
-#         try:
-#             for f in cache_root.iterdir():
-#                 if f.is_file():
-#                     try:
-#                         f.unlink()
-#                     except Exception:
-#                         pass
-#         except Exception:
-#             pass
-
-#         if savelcpath is not None:
-#             for pattern in ['*bad_outliers.csv',
-#                             '*good_outliers.csv',
-#                             '*preclipped.csv',
-#                             '*RAW_LC.csv']:
-#                 for f in savelcpath.glob(pattern):
-#                     try:
-#                         f.unlink()
-#                     except Exception:
-#                         pass
+    #
     # -------------------------------------------------------------------------
     # keep_extra_files == False → clear astropy cache + top-level cache files
     # -------------------------------------------------------------------------
@@ -32153,20 +28295,6 @@ def full_pipeline(ID, path, cadence, Sector, star=None, settings: dict | None = 
 #    
 #
 #
-##########################################
-##########################################
-######### FULL PIPELINE FUNCTIONS ########
-##########################################
-##########################################
-##
-##
-#
-#
-#
-#
-#
-#
-#
 #########################################################
 #########################################################
 ################### Change Log ##########################
@@ -32174,7 +28302,7 @@ def full_pipeline(ID, path, cadence, Sector, star=None, settings: dict | None = 
 #########################################################
 
 # ## Change log for NEMESIS V1.93
-# ## March 31st, 2026 [Claude supported]
+# ## March 31st, 2026 
 # ##
 # ## - Restructured "full_pipeline" to support quaternion pre-fetching before
 # ##   LC creation, reducing race conditions in parallel/cluster jobs.

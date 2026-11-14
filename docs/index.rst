@@ -12,6 +12,7 @@ TRICERATOPS analysis wrappers and injection-recovery / orbit-scrambling
 controls. The separate wrappers shown in the tutorials are **not installed
 public APIs** of ``nemesis_tess``. See :doc:`workflow` for the distinctions.
 
+
 Project and developer
 ---------------------
 
@@ -20,8 +21,11 @@ NEMESIS is developed and maintained by
 
 - `Developer website <https://daxfeliz.github.io/>`_
 - `GitHub profile <https://github.com/daxfeliz>`_
-- `NEMESIS source code <https://github.com/daxfeliz/NEMESIS>`_
+- `NEMESIS source repository <https://github.com/daxfeliz/NEMESIS>`_
+- `NEMESIS I — Feliz et al. (2021) <https://iopscience.iop.org/article/10.3847/1538-3881/abedb3>`_
 
+NEMESIS II (Feliz et al., in preparation) is planned for
+arXiv posting and submission to *The Astronomical Journal*.
 
 .. toctree::
    :maxdepth: 2
