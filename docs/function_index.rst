@@ -42,7 +42,6 @@ C
 - :ref:`_CacheLock.__exit__ <api-nemesis-tess-pipeline-cachelock-exit>` — No description available in the source docstring.
 - :ref:`_CacheLock.__init__ <api-nemesis-tess-pipeline-cachelock-init>` — No description available in the source docstring.
 - :ref:`_check_harmonic <api-nemesis-tess-pipeline-check-harmonic>` — Check whether the 2P candidate has higher power than P, which would indicate p\_peak is actually P\_rot/2.
-- :ref:`_compute_per_cadence_centroid <api-nemesis-tess-pipeline-compute-per-cadence-centroid>` — Compute per-cadence quadratic centroids using an independent loose threshold mask, NOT the PRF pix\_mask, eliminating the self-referential bias present in the original SAP\_ALT2 Step 4 inline centroid loop.
 - :ref:`calc_flux_contamination <api-nemesis-tess-pipeline-calc-flux-contamination>` — Compute the flux contamination ratio and its 1-sigma uncertainty for a target star given nearby TIC sources.
 - :ref:`calc_mean_depths <api-nemesis-tess-pipeline-calc-mean-depths>` — See source for parameters and behavior.
 - :ref:`calc_transit_times <api-nemesis-tess-pipeline-calc-transit-times>` — Return all mid-transit times within t
@@ -176,7 +175,6 @@ M
 - :ref:`Make_dirs <api-nemesis-tess-pipeline-make-dirs>` — Create all NEMESIS output directories and write resolved path strings back into ''default\_settings''.
 - :ref:`mann2019_mass_radius <api-nemesis-tess-pipeline-mann2019-mass-radius>` — Estimate M-dwarf stellar mass and radius from absolute 2MASS K\_s magnitude.
 - :ref:`mask_out_neighbor_pixels <api-nemesis-tess-pipeline-mask-out-neighbor-pixels>` — Excise aperture pixels contaminated by neighboring stars.
-- :ref:`mask_out_neighbor_pixels_OLD <api-nemesis-tess-pipeline-mask-out-neighbor-pixels-old>` — Excise aperture pixels contaminated by neighboring stars, with a separation-based gate that escalates sub-pixel blends to PRF decontamination rather than attempting pixel excision.
 - :ref:`mass_radius_mdwarf_relation <api-nemesis-tess-pipeline-mass-radius-mdwarf-relation>` — Adjusts the mass and radius of an M-dwarf star based on the given inputs. This function uses an OVERLY simple linear mass-radius relationship for M-dwarfs, where if one of the stellar parameters (mass or radius) is…
 - :ref:`mirror_and_model_left_right_transit <api-nemesis-tess-pipeline-mirror-and-model-left-right-transit>` — Performs a comprehensive symmetry analysis for a transit event by comparing the left and right mirrored transits to the model and computing various metrics such as RMSE, residuals, and chi-squared values. Also…
 - :ref:`momentumdump_removal <api-nemesis-tess-pipeline-momentumdump-removal>` — This function will remove windows of data around momentum dump time stamps and return a mask.
@@ -206,7 +204,6 @@ P
 -
 
 - :ref:`_per_transit_snr <api-nemesis-tess-pipeline-per-transit-snr>` — Compute a simple per-transit SNR for a single event.
-- :ref:`_prf_weighted_flux_pass <api-nemesis-tess-pipeline-prf-weighted-flux-pass>` — Per-cadence PRF-weighted flux extraction with corrected normalization and improved acceptance criteria. Replaces the Step 4b inline block in the original SAP\_ALT2.
 - :ref:`p2p_rms <api-nemesis-tess-pipeline-p2p-rms>` — Compute the point-to-point RMS of a light curve as a robust noise proxy.
 - :ref:`patch_EDIVetter_Unplugged <api-nemesis-tess-pipeline-patch-edivetter-unplugged>` — Patch the EDIunplugged package by replacing deprecated 'np.float' with 'float' in Python scripts. This patch is only applied if the installed version of EDIunplugged is "0.1.3".
 - :ref:`pd_to_lk <api-nemesis-tess-pipeline-pd-to-lk>` — Convert a NEMESIS ''LC\_df'' DataFrame to a ''lightkurve.LightCurve'' object.
