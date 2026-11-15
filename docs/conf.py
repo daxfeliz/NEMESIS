@@ -2,8 +2,9 @@
 
 project = "NEMESIS"
 author = "Dax L. Feliz"
-release = "1.96"
-version = "1.96"
+copyright = "%Y, Dax L. Feliz"
+release = "2.0"
+version = "2.0"
 
 extensions = ["myst_parser", "nbsphinx"]
 source_suffix = {".rst": "restructuredtext", ".md": "markdown"}
