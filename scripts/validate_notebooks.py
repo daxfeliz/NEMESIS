@@ -29,7 +29,7 @@ def validate_docs_examples(repo_root: Path) -> int:
     """
     folder = repo_root / "docs" / "notebooks"
     notebooks = sorted(folder.glob("*.ipynb"))
-    assert len(notebooks) == 5, f"Expected 5 notebooks in {folder}"
+    assert len(notebooks) == 6, f"Expected 6 notebooks in {folder}"
 
     for path in notebooks:
         document = json.loads(path.read_text(encoding="utf-8"))

@@ -24,8 +24,9 @@ NEMESIS is developed and maintained by
 - `NEMESIS source repository <https://github.com/daxfeliz/NEMESIS>`_
 - `NEMESIS I — Feliz et al. (2021) <https://iopscience.iop.org/article/10.3847/1538-3881/abedb3>`_
 
-NEMESIS II (Feliz et al., in preparation) is planned for
-arXiv posting and submission to *The Astronomical Journal*.
+NEMESIS II is available as an
+`arXiv preprint (Feliz et al. 2026) <https://arxiv.org/abs/2611.21758>`_
+and has been submitted to *The Astronomical Journal* for peer review.
 
 .. toctree::
    :maxdepth: 2
@@ -39,6 +40,7 @@ arXiv posting and submission to *The Astronomical Journal*.
    :maxdepth: 1
    :caption: Example notebooks
 
+   notebooks/00_default_settings
    notebooks/01_nemesis_leovetter
    notebooks/02_jaxoplanet_refit
    notebooks/03_triceratops_validation

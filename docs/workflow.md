@@ -1,7 +1,7 @@
 # From blind transit search to statistical validation
 
 The NEMESIS II tutorials follow three scientifically distinct stages:
-
+0. **Exploring default settings of NEMESIS pipeline:** A brief rundown of each setting, it's default value and what it's used for.
 1. **NEMESIS + integrated LEO-Vetter:** Extract/detrend FFI light curves,
    search with BLS/TLS, and generate vetting reports. LEO-Vetter is already
    run as part of the report; do not duplicate it.
@@ -34,13 +34,14 @@ from preserving FITS and the `*_pix_mask.pkl` files.
 
 ## Notebooks
 
+- [00" default NEMESIS pipeline settings](notebooks/00_default_settings.ipynb)
 - [01: transit search and LEO-Vetter](notebooks/01_nemesis_leovetter.ipynb)
 - [02: actual NEMESIS II jaxoplanet/NumPyro refit](notebooks/02_jaxoplanet_refit.ipynb)
 - [03: TRICERATOPS validation](notebooks/03_triceratops_validation.ipynb)
 - [04: showcase stellar rotation](notebooks/04_rotation_lomb_scargle.ipynb)
 - [05: showcase simple flare detection](notebooks/05_flare_threshold_search.ipynb)
 
-Notebooks 01–03 share `~/nemesis_tutorials/toi1235_s20` for a single-star
+Notebook 00 gives a brief breakdown of the default NEMESIS pipeline settings. Notebooks 01–03 share `~/nemesis_tutorials/toi1235_s20` for a single-star
 example. Notebook 02 uses short tutorial chains **only for technical testing**;
 production uses the batch script's settings: `n_chains=4`, `n_warmup=2000`,
 `n_samples=3000`, Student-t likelihood with `student_t_nu=4.0`,
