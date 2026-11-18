@@ -34,7 +34,7 @@ from preserving FITS and the `*_pix_mask.pkl` files.
 
 ## Notebooks
 
-- [00" default NEMESIS pipeline settings](notebooks/00_default_settings.ipynb)
+- [00: default NEMESIS pipeline settings](notebooks/00_default_settings.ipynb)
 - [01: transit search and LEO-Vetter](notebooks/01_nemesis_leovetter.ipynb)
 - [02: actual NEMESIS II jaxoplanet/NumPyro refit](notebooks/02_jaxoplanet_refit.ipynb)
 - [03: TRICERATOPS validation](notebooks/03_triceratops_validation.ipynb)

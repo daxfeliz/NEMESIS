@@ -23,8 +23,7 @@ NEMESIS is developed and maintained by
 - `GitHub profile <https://github.com/daxfeliz>`_
 - `NEMESIS source repository <https://github.com/daxfeliz/NEMESIS>`_
 - `NEMESIS I — Feliz et al. (2021) <https://iopscience.iop.org/article/10.3847/1538-3881/abedb3>`_
-
-NEMESIS II is available as an
+- NEMESIS II is available as an
 `arXiv preprint (Feliz et al. 2026) <https://arxiv.org/abs/2611.21758>`_
 and has been submitted to *The Astronomical Journal* for peer review.
 
