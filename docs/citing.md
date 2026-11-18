@@ -2,9 +2,9 @@
 
 If NEMESIS software contributes to your research, please cite the published methods paper:
 
-**Feliz et al. (2021), *The Astronomical Journal*, 161, 247.** [Publisher article](https://iopscience.iop.org/article/10.3847/1538-3881/abedb3) · [DOI](https://doi.org/10.3847/1538-3881/abedb3)
+**NEMESIS I (Feliz et al. 2021), *The Astronomical Journal*, 161, 247.** [Publisher article](https://iopscience.iop.org/article/10.3847/1538-3881/abedb3) · [DOI: https://doi.org/10.3847/1538-3881/abedb3](https://doi.org/10.3847/1538-3881/abedb3)
 
-NEMESIS II (Feliz et al., **in preparation**) describes the extended TESS Primary Mission M-dwarf transit survey and its updated automatic vetting and selection-function analysis. Its authors plan to post a preprint on arXiv and submit to *The Astronomical Journal*. **No public NEMESIS II citation or DOI is available yet**; update your references when the manuscript becomes public.
+**NEMESIS II (Feliz et al. 2026)** [arxiv e-print](https://arxiv.org/abs/2611.21758) describes the extended TESS Primary Mission M-dwarf transit survey and its updated automatic vetting and selection-function analysis. This work as been submitted to *The Astronomical Journal* for peer-review. DOI: [DOI: https://doi.org/10.48550/arXiv.2611.21758](https://doi.org/10.48550/arXiv.2611.21758)
 
 Where appropriate, cite the underlying methods and software independently, including Lightkurve, wotan, Transit Least Squares, LEO-Vetter, jaxoplanet, and TRICERATOPS, according to the tools used in your analysis. NEMESIS's license and a machine-readable software citation record are available in the repository as `LICENSE` and `CITATION.cff`.
 

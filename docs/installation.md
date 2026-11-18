@@ -86,7 +86,7 @@ Read the Docs obtains Pandoc automatically from `.readthedocs.yaml`. It builds t
 
 ## Troubleshooting
 
-**A pip certificate-verification error** generally indicates a local CA/trust-store, proxy, or Python installation issue, not a NEMESIS requirement. Update the system and Python certificate configuration or consult your institution's IT support. Do **not** disable TLS validation or use `--trusted-host` as a routine workaround.
+**A pip certificate-verification error** generally indicates a local CA/trust-store, proxy, or Python installation issue, not a NEMESIS requirement. Update the system and Python certificate configuration or consult your institution's IT support. Do **not** disable TLS validation or use `--trusted-host` as a routine workaround (meaning Transport Layer Security, not Transit Least Squares, hehehe).
 
 **A TESS or catalog query fails:** MAST, CDS/VizieR, and other archive services can experience outages or rate limits independently of the Python installation. Recheck the service and the original exception. A failed external query does not necessarily imply a pip or NEMESIS installation problem.
 

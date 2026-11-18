@@ -7,8 +7,8 @@ The NEMESIS II tutorials follow three scientifically distinct stages:
    run as part of the report; do not duplicate it.
 2. **jaxoplanet / NumPyro:** After selecting a candidate, call the actual
    `nemesis_jaxoplanet_refit.refine_transit_parameters` model, supplied in
-   `examples/reference_wrappers/nemesis_jaxoplanet_refit.py`. The HPC
-   `run_jaxoplanet_batch.py` worker calls this same function using disBatch
+   `examples/reference_wrappers/nemesis_jaxoplanet_refit.py`. The a High-Performance Computing cluster
+   `run_jaxoplanet_batch.py` worker calls this same function using [disBatch](https://github.com/flatironinstitute/disBatch)
    batches and a quality-aware restart policy. That separate model is
    reference source, not automatically installed by `nemesis-tess`.
 3. **TRICERATOPS:** Run the supplied `run_triceratops_on_nemesis` wrapper
@@ -46,10 +46,10 @@ production uses the batch script's settings: `n_chains=4`, `n_warmup=2000`,
 `n_samples=3000`, Student-t likelihood with `student_t_nu=4.0`,
 `target_accept=0.95`, and default `r_hi_sigmas=10.0`.
 Before forwarding its posterior to notebook 03, inspect convergence,
-ESS, divergences and radius-prior ceiling occupancy. Notebook 03 is
+Effective Sample Size (ESS), divergences and radius-prior ceiling occupancy. Notebook 03 is
 **opt-in** due to long sampling and external TIC/MAST/TRILEGAL queries.
 Its default scientific setting is 20 trials with 5,000,000 samples each;
-its 1-trial smoke test does not establish a trustworthy FPP.
+its 1-trial smoke test does not establish a trustworthy False-Positive Probability (FPP).
 
 ## Stellar-variability showcase
 

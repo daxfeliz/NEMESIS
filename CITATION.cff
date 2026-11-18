@@ -1,8 +1,7 @@
 cff-version: 1.2.0
 message: >-
-  If you use NEMESIS, please cite Feliz et al. (2021, AJ, 161, 247,
-  DOI: 10.3847/1538-3881/abedb3). Also cite the NEMESIS II paper once it
-  is publicly available; at present it is in preparation.
+  If you use NEMESIS, please cite NEMESIS I (Feliz et al. 2021 ; AJ, 161, 247,
+  DOI: 10.3847/1538-3881/abedb3). Also cite the NEMESIS II paper (Feliz et al. 2026; https://arxiv.org/abs/2611.21758 , DOI: https://doi.org/10.48550/arXiv.2611.21758).
 title: NEMESIS — Exoplanet TraNsit SurvEy of Nearby M-dwarfs in TESS FFIs
 type: software
 authors:

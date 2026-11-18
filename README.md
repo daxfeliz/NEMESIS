@@ -19,7 +19,7 @@ NEMESIS is an **open-source Python framework for extracting, processing, and sea
 
 The framework combines background estimation, centroid measurements, aperture photometry, nearby-source contamination treatment, spacecraft-quality and pointing-jitter screening, and **pixel-level decorrelation (PLD)** to mitigate instrumental systematics. It then supports blind searches for periodic transit signals using **Box-fitting Least Squares (BLS)** and **Transit Least Squares (TLS)**. Its outputs include processed light curves, fitted search parameters, and multi-page diagnostic/vetting reports incorporating **LEO-Vetter** measurements. The broader NEMESIS II survey uses the same detection and automated-vetting chain in transit-injection and orbit-scrambling control experiments to measure survey sensitivity and false-alarm reliability.
 
-NEMESIS was introduced in [Feliz et al. (2021, *The Astronomical Journal*)](https://iopscience.iop.org/article/10.3847/1538-3881/abedb3). Its follow-up study, **NEMESIS II (Feliz et al., in preparation)**, describes a search of 213,658 single-sector light curves of 113,047 M dwarfs in TESS Primary Mission Sectors 1–26. The manuscript is **not yet posted or peer-reviewed**; posting to arXiv and submission to *The Astronomical Journal* are planned. Reported transit signals and planet candidates are not, by themselves, confirmed planets.
+NEMESIS was introduced in [Feliz et al. (2021, *The Astronomical Journal*)](https://iopscience.iop.org/article/10.3847/1538-3881/abedb3). Its follow-up study, **[NEMESIS II (Feliz et al. 2026)](https://arxiv.org/abs/2611.21758)**, describes a search of 213,658 single-sector light curves of 113,047 M dwarfs in TESS Primary Mission Sectors 1–26. The manuscript is on arxiv [https://arxiv.org/abs/2611.21758](https://arxiv.org/abs/2611.21758) and is submitted to *The Astronomical Journal* are for peer-review. Reported transit signals and planet candidates are not, by themselves, confirmed planets.
 
 <!-- To add a logo, create docs/_static/images/nemesis-logo.png and uncomment the next line. -->
 <!-- <p align="center"><img src="docs/_static/images/nemesis-logo.png" alt="NEMESIS project logo" width="360"></p> -->
@@ -31,7 +31,7 @@ NEMESIS was introduced in [Feliz et al. (2021, *The Astronomical Journal*)](http
 - **Developer GitHub profile:** [github.com/daxfeliz](https://github.com/daxfeliz)
 - **Developer website:** [daxfeliz.github.io](https://daxfeliz.github.io/)
 - **NEMESIS I:** [Feliz et al. (2021), *AJ*, 161, 247](https://iopscience.iop.org/article/10.3847/1538-3881/abedb3)
-- **NEMESIS II:** Feliz et al. (in preparation); planned arXiv posting and submission to *The Astronomical Journal* (link to follow)
+- **NEMESIS II:** [Feliz et al. 2026](https://arxiv.org/abs/2611.21758); submitted to *The Astronomical Journal* (link to follow)
 
 ## Installation
 
